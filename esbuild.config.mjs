@@ -28,6 +28,10 @@ const zipPlugin = {
 const runtimeModules = {
   "@codemirror/autocomplete": "src/runtime/codemirror-autocomplete.js",
   "@codemirror/language": "src/runtime/codemirror-language.js",
+  "@codemirror/lint": "src/runtime/codemirror-lint.js",
+  "@codemirror/state": "src/runtime/codemirror-state.js",
+  "@codemirror/view": "src/runtime/codemirror-view.js",
+  "@lezer/common": "src/runtime/lezer-common.js",
   "@lezer/highlight": "src/runtime/lezer-highlight.js",
   "@lezer/lr": "src/runtime/lezer-lr.js",
 };

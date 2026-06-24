@@ -1,0 +1,166 @@
+@top SourceFile { Element* }
+
+@precedence {
+  declaration @left,
+  label @left
+}
+
+Element {
+  ContainerDocComment |
+  DocComment |
+  LineComment |
+  LineString |
+  String |
+  Char |
+  Number |
+  Builtin |
+  FunctionDeclaration |
+  Label |
+  Block |
+  Parenthesized |
+  Bracketed |
+  Keyword |
+  BuiltinType |
+  Identifier |
+  Operator |
+  Punctuation
+}
+
+FunctionDeclaration {
+  fnKw Identifier? !declaration Parenthesized
+}
+
+Block { "{" Element* "}" }
+Parenthesized { "(" Element* ")" }
+Bracketed { "[" Element* "]" }
+Label { Identifier !label ":" }
+
+Keyword {
+  addrspaceKw | alignKw | allowzeroKw | andKw | anyframeKw | anytypeKw |
+  asmKw | asyncKw | awaitKw | breakKw | callconvKw | catchKw | comptimeKw |
+  constKw | continueKw | deferKw | elseKw | enumKw | errdeferKw | errorKw |
+  exportKw | externKw | falseKw | forKw | ifKw | inlineKw | linksectionKw |
+  noaliasKw | nosuspendKw | nullKw | opaqueKw | orKw | orelseKw | packedKw |
+  pubKw | resumeKw | returnKw | structKw | suspendKw | switchKw | testKw |
+  threadlocalKw | trueKw | tryKw | undefinedKw | unionKw | unreachableKw |
+  usingnamespaceKw | varKw | volatileKw | whileKw
+}
+
+BuiltinType { BuiltinTypeName }
+Operator { OperatorToken }
+Punctuation { PunctuationToken | ":" }
+
+@tokens {
+  whitespace { $[ \t\r\n]+ }
+
+  ContainerDocComment { "//!" ![\n\r]* }
+  DocComment { "///" ![\n\r]* }
+  LineComment { "//" ![\n\r]* }
+  LineString { "\\\\" ![\n\r]* }
+
+  String {
+    '"' ( "\\" ![\n\r] | !["\\\n\r] )* ('"' | "")
+  }
+
+  Char {
+    "'" ( "\\" ![\n\r] | !['\\\n\r] )* ("'" | "")
+  }
+
+  Number {
+    ("0x" | "0X") $[0-9a-fA-F_]+ ("." $[0-9a-fA-F_]+)? ($[pP] $[+-]? $[0-9_]+)? |
+    ("0b" | "0B") $[01_]+ |
+    ("0o" | "0O") $[0-7_]+ |
+    $[0-9] $[0-9_]* ("." $[0-9_]+)? ($[eE] $[+-]? $[0-9_]+)?
+  }
+
+  Builtin { "@" $[A-Za-z_] $[A-Za-z0-9_]* }
+  Identifier { $[A-Za-z_] $[A-Za-z0-9_]* }
+
+  OperatorToken {
+    "..." | ".." |
+    ">>=" | "<<=" | "+%=" | "-%=" | "*%=" | "+|=" | "-|=" | "*|=" |
+    "=>" | "==" | "!=" | "<=" | ">=" | "&&" | "||" |
+    "++" | "**" | "<<" | ">>" | "+%" | "-%" | "*%" | "+|" | "-|" | "*|" |
+    "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" |
+    "=" | "!" | "~" | "?" | "." | "+" | "-" | "*" | "/" | "%" |
+    "<" | ">" | "&" | "|" | "^"
+  }
+
+  PunctuationToken { "," | ";" }
+
+  "(" ")" "[" "]" "{" "}" ":"
+
+  @precedence {
+    ContainerDocComment,
+    DocComment,
+    LineComment,
+    LineString,
+    String,
+    Char,
+    Number,
+    Builtin,
+    Identifier,
+    OperatorToken,
+    PunctuationToken
+  }
+}
+
+@external specialize { Identifier } specializeIdentifier from "./specialize.js" {
+  addrspaceKw,
+  alignKw,
+  allowzeroKw,
+  andKw,
+  anyframeKw,
+  anytypeKw,
+  asmKw,
+  asyncKw,
+  awaitKw,
+  breakKw,
+  callconvKw,
+  catchKw,
+  comptimeKw,
+  constKw,
+  continueKw,
+  deferKw,
+  elseKw,
+  enumKw,
+  errdeferKw,
+  errorKw,
+  exportKw,
+  externKw,
+  falseKw,
+  fnKw,
+  forKw,
+  ifKw,
+  inlineKw,
+  linksectionKw,
+  noaliasKw,
+  nosuspendKw,
+  nullKw,
+  opaqueKw,
+  orKw,
+  orelseKw,
+  packedKw,
+  pubKw,
+  resumeKw,
+  returnKw,
+  structKw,
+  suspendKw,
+  switchKw,
+  testKw,
+  threadlocalKw,
+  trueKw,
+  tryKw,
+  undefinedKw,
+  unionKw,
+  unreachableKw,
+  usingnamespaceKw,
+  varKw,
+  volatileKw,
+  whileKw,
+  BuiltinTypeName
+}
+
+@skip { whitespace }
+
+@detectDelim

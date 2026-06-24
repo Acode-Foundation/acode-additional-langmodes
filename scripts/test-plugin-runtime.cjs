@@ -3,24 +3,28 @@ const assert = require("node:assert/strict");
 const runtimeModules = {
 	"@codemirror/autocomplete": require("@codemirror/autocomplete"),
 	"@codemirror/language": require("@codemirror/language"),
+	"@codemirror/lint": require("@codemirror/lint"),
+	"@codemirror/state": require("@codemirror/state"),
+	"@codemirror/view": require("@codemirror/view"),
+	"@lezer/common": require("@lezer/common"),
 	"@lezer/highlight": require("@lezer/highlight"),
 	"@lezer/lr": require("@lezer/lr"),
 };
 
 let initPlugin;
 let unmountPlugin;
-let registered;
-let unregistered;
+const registered = [];
+const unregistered = [];
 
 const editorLanguages = {
 	get() {
 		return null;
 	},
 	register(name, extensions, caption, load) {
-		registered = { name, extensions, caption, load };
+		registered.push({ name, extensions, caption, load });
 	},
 	unregister(name) {
-		unregistered = name;
+		unregistered.push(name);
 	},
 };
 
@@ -42,17 +46,59 @@ require("../dist/main.js");
 async function test() {
 	await initPlugin("file:///plugin/", null, {});
 
-	assert.equal(registered.name, "autohotkey");
-	assert(registered.extensions.includes("ahk"));
+	const modes = new Map(registered.map((mode) => [mode.name, mode]));
+	const expectedNames = [
+		"autohotkey",
+		"zig",
+		"bibtex",
+		"elixir",
+		"golfscript",
+		"graphql",
+		"dot",
+		"hcl",
+		"j",
+		"janet",
+		"pkl",
+		"svelte",
+		"wgsl",
+	];
 
-	const support = registered.load();
-	assert.equal(support.language.name, "autohotkey");
-	assert.equal(support.language.parser.parse("MsgBox('ok')").length, 12);
+	assert.deepEqual([...modes.keys()], expectedNames);
+	assert(modes.get("autohotkey").extensions.includes("ahk"));
+	assert(modes.get("zig").extensions.includes("zon"));
+
+	const samples = {
+		autohotkey: "MsgBox('ok')",
+		zig: 'const std = @import("std");',
+		bibtex: "@article{example, title={Example}}",
+		elixir: "defmodule Example do\nend",
+		golfscript: "1 2 +",
+		graphql: "query Example { viewer { id } }",
+		dot: "digraph G { a -> b }",
+		hcl: 'name = "example"',
+		j: "1 + 2",
+		janet: "(def x 1)",
+		pkl: 'name = "example"',
+		svelte: "<script>let x = 1;</script><p>{x}</p>",
+		wgsl: "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }",
+	};
+
+	for (const [name, source] of Object.entries(samples)) {
+		const support = modes.get(name).load();
+		assert(support?.language, `${name} did not return LanguageSupport`);
+		assert.equal(
+			support.language.parser.parse(source).length,
+			source.length,
+			`${name} did not parse the full fixture`,
+		);
+	}
 
 	await unmountPlugin();
-	assert.equal(unregistered, "autohotkey");
+	assert.deepEqual(unregistered, [...expectedNames].reverse());
 
-	console.log("Validated Acode registration and CodeMirror language loading.");
+	console.log(
+		`Validated ${expectedNames.length} Acode registrations and language loaders.`,
+	);
 }
 
 test().catch((error) => {

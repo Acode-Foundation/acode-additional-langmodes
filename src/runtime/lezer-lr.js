@@ -1,3 +1,8 @@
 const lr = acode.require("@lezer/lr");
 
-export const { LRParser } = lr;
+export const {
+	ContextTracker,
+	ExternalTokenizer,
+	LocalTokenGroup,
+	LRParser,
+} = lr;

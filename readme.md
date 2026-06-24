@@ -5,6 +5,22 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 ## Included modes
 
 - AutoHotkey (`.ahk`, `.ah1`, `.ah2`, `.ahk1`, `.ahk2`)
+- Zig (`.zig`, `.zon`)
+- BibTeX (`.bib`)
+- Elixir (`.ex`, `.exs`, `.eex`, `.heex`, `.leex`)
+- GolfScript (`.gs`)
+- GraphQL (`.graphql`, `.graphqls`, `.gql`)
+- Graphviz DOT (`.dot`, `.gv`)
+- HCL / Terraform (`.hcl`, `.tf`, `.tfvars`)
+- J (`.ijs`)
+- Janet (`.janet`)
+- Pkl (`.pkl`)
+- Svelte (`.svelte`)
+- WGSL (`.wgsl`)
+
+Community modes are registered only when Acode does not already provide a mode
+with the same name. Languages already covered by Acode's
+`@codemirror/language-data` registry are intentionally not duplicated.
 
 ## Adding another language
 

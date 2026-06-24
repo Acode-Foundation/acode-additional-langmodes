@@ -7,11 +7,22 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@citedrive/codemirror-lang-bibtex": "^6.4.1",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/language": "^6.12.3",
+    "@iizukak/codemirror-lang-wgsl": "^0.3.0",
     "@lezer/highlight": "^1.2.3",
     "@lezer/lr": "^1.4.10",
+    "@replit/codemirror-lang-svelte": "^6.0.0",
+    "@viz-js/lang-dot": "^1.0.5",
     "acode-plugin-types": "^1.11.7-patch.2",
+    "cm6-graphql": "^0.2.1",
+    "codemirror-lang-elixir": "^4.0.1",
+    "codemirror-lang-golfscript": "^0.1.0",
+    "codemirror-lang-hcl": "^0.1.0",
+    "codemirror-lang-j": "^0.1.1",
+    "codemirror-lang-janet": "^0.7.2",
+    "codemirror-lang-pkl": "^0.1.0",
     "html-tag-js": "^2.4.15"
   },
   "devDependencies": {
@@ -22,7 +33,7 @@
   },
   "scripts": {
     "dev": "node esbuild.config.mjs --serve",
-    "generate": "lezer-generator src/languages/autohotkey/autohotkey.grammar -o src/languages/autohotkey/parser.js",
+    "generate": "lezer-generator src/languages/autohotkey/autohotkey.grammar -o src/languages/autohotkey/parser.js && lezer-generator src/languages/zig/zig.grammar -o src/languages/zig/parser.js",
     "build": "npm run generate && node esbuild.config.mjs",
     "test": "npm run generate && node scripts/test-parser.mjs",
     "check": "npm run generate && tsc --noEmit && node scripts/test-parser.mjs && npm run build && node scripts/test-plugin-runtime.cjs"
