@@ -6,6 +6,7 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 
 - AutoHotkey (`.ahk`, `.ah1`, `.ah2`, `.ahk1`, `.ahk2`)
 - Zig (`.zig`, `.zon`)
+- Git ignore (`.gitignore`, `.ignore`, Git exclude-style files)
 - BibTeX (`.bib`)
 - Elixir (`.ex`, `.exs`, `.eex`, `.heex`, `.leex`)
 - GolfScript (`.gs`)

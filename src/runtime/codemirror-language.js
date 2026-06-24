@@ -4,6 +4,7 @@ export const {
 	Language,
 	LanguageSupport,
 	LRLanguage,
+	StreamLanguage,
 	bracketMatching,
 	bracketMatchingHandle,
 	continuedIndent,

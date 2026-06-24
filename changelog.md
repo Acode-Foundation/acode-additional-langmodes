@@ -4,5 +4,6 @@
 
 - Add AutoHotkey v1/v2 language support.
 - Add Zig and ZON language support.
+- Add Git ignore language support.
 - Add missing CodeMirror community modes for BibTeX, Elixir, GolfScript,
   GraphQL, Graphviz DOT, HCL, J, Janet, Pkl, Svelte, and WGSL.

@@ -1,5 +1,6 @@
 import { autoHotkeyMode } from "./autohotkey";
 import { communityLanguageModes } from "./community";
+import { gitignoreMode } from "./gitignore";
 import { zigMode } from "./zig";
 
 /**
@@ -10,5 +11,6 @@ import { zigMode } from "./zig";
 export const languageModes = [
 	autoHotkeyMode,
 	zigMode,
+	gitignoreMode,
 	...communityLanguageModes,
 ];

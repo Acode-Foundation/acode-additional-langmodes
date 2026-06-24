@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const { EditorState } = require("@codemirror/state");
 
 const runtimeModules = {
 	"@codemirror/autocomplete": require("@codemirror/autocomplete"),
@@ -50,6 +51,7 @@ async function test() {
 	const expectedNames = [
 		"autohotkey",
 		"zig",
+		"gitignore",
 		"bibtex",
 		"elixir",
 		"golfscript",
@@ -66,10 +68,12 @@ async function test() {
 	assert.deepEqual([...modes.keys()], expectedNames);
 	assert(modes.get("autohotkey").extensions.includes("ahk"));
 	assert(modes.get("zig").extensions.includes("zon"));
+	assert(modes.get("gitignore").extensions.includes("gitignore"));
 
 	const samples = {
 		autohotkey: "MsgBox('ok')",
 		zig: 'const std = @import("std");',
+		gitignore: "# build output\ndist/\n!important.log\n*.tmp\n",
 		bibtex: "@article{example, title={Example}}",
 		elixir: "defmodule Example do\nend",
 		golfscript: "1 2 +",
@@ -86,6 +90,10 @@ async function test() {
 	for (const [name, source] of Object.entries(samples)) {
 		const support = modes.get(name).load();
 		assert(support?.language, `${name} did not return LanguageSupport`);
+		EditorState.create({
+			doc: source,
+			extensions: [support],
+		});
 		assert.equal(
 			support.language.parser.parse(source).length,
 			source.length,
