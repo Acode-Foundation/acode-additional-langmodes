@@ -1,4 +1,5 @@
-import { bibtex } from "@citedrive/codemirror-lang-bibtex";
+import { bibtexLanguage } from "@citedrive/codemirror-lang-bibtex";
+import { LanguageSupport } from "@codemirror/language";
 import { wgsl } from "@iizukak/codemirror-lang-wgsl";
 import { svelte } from "@replit/codemirror-lang-svelte";
 import { dot } from "@viz-js/lang-dot";
@@ -19,7 +20,7 @@ export const communityLanguageModes = [
 		name: "bibtex",
 		caption: "BibTeX",
 		extensions: ["bib"],
-		load: () => bibtex(),
+		load: () => new LanguageSupport(bibtexLanguage),
 	},
 	{
 		name: "elixir",

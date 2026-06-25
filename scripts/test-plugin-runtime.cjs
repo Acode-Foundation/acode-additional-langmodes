@@ -90,6 +90,13 @@ async function test() {
 	for (const [name, source] of Object.entries(samples)) {
 		const support = modes.get(name).load();
 		assert(support?.language, `${name} did not return LanguageSupport`);
+		if (name === "bibtex") {
+			assert.equal(
+				support.support.length,
+				0,
+				"bibtex should not enable package autocomplete or linter extensions",
+			);
+		}
 		EditorState.create({
 			doc: source,
 			extensions: [support],
