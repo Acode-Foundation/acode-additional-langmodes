@@ -40,8 +40,5 @@
     "test": "npm run generate && node scripts/test-parser.mjs",
     "check": "npm run generate && tsc --noEmit && node scripts/test-parser.mjs && npm run build && node scripts/test-plugin-runtime.cjs"
   },
-  "browserslist": "cover 100%,not android < 5",
-  "allowScripts": {
-    "esbuild@0.25.8": true
-  }
+  "browserslist": "cover 100%,not android < 5"
 }
