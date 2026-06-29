@@ -52,6 +52,7 @@ async function test() {
 		"autohotkey",
 		"zig",
 		"gitignore",
+		"jsonc",
 		"bibtex",
 		"elixir",
 		"golfscript",
@@ -69,11 +70,13 @@ async function test() {
 	assert(modes.get("autohotkey").extensions.includes("ahk"));
 	assert(modes.get("zig").extensions.includes("zon"));
 	assert(modes.get("gitignore").extensions.includes("gitignore"));
+	assert(modes.get("jsonc").extensions.includes("jsonc"));
 
 	const samples = {
 		autohotkey: "MsgBox('ok')",
 		zig: 'const std = @import("std");',
 		gitignore: "# build output\ndist/\n!important.log\n*.tmp\n",
+		jsonc: '{\n  // comment\n  "foo": "bar",\n}',
 		bibtex: "@article{example, title={Example}}",
 		elixir: "defmodule Example do\nend",
 		golfscript: "1 2 +",
