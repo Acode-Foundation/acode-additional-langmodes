@@ -12,6 +12,7 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - JSONC (`.jsonc`)
 - BibTeX (`.bib`)
 - Elixir (`.ex`, `.exs`, `.eex`, `.heex`, `.leex`)
+- EJS (`.ejs`)
 - GolfScript (`.gs`)
 - GraphQL (`.graphql`, `.graphqls`, `.gql`)
 - Graphviz DOT (`.dot`, `.gv`)

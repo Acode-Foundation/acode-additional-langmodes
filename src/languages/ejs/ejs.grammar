@@ -1,0 +1,46 @@
+@top Template { (EjsComment | HtmlComment | Text | EjsTag | EscapedTag)* }
+
+EjsTag {
+  EjsExpression |
+  EjsBlock
+}
+
+
+EjsExpression {
+  ExprStart Content? TagEnd
+}
+
+EjsBlock {
+  BlockStart Content? TagEnd
+}
+
+EscapedTag {
+  LiteralStart
+}
+
+@external tokens ejsComment from "./tokens.js" {
+  EjsComment
+}
+
+@tokens {
+  ExprStart { "<%" ("=" | "-") }
+  BlockStart { "<%" "_"? }
+  LiteralStart { "<%%" }
+
+  // Keep trim markers available to TagEnd while allowing them in JS content.
+  Content { (![%\-_] | "%" ![>] | "-" ![>%] | "_" ![>%])+ }
+
+  TagEnd { ("-" | "_")? "%>" }
+
+  HtmlComment { "<!--" (![-] | "-" ![-] | "--" ![>])* "-->" }
+
+  Text { (![<] | "<" ![%!])+ }
+
+  @precedence {
+    LiteralStart,
+    ExprStart,
+    BlockStart
+  }
+}
+
+@detectDelim

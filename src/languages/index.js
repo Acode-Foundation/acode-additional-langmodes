@@ -6,6 +6,8 @@ import { gitignoreMode } from "./gitignore";
 import { zigMode } from "./zig";
 import { jsoncMode } from "./jsonc";
 
+import { ejsMode } from "./ejs"
+
 /**
  * Add future language descriptors here. Each descriptor owns its metadata and
  * lazy CodeMirror loader, so adding a mode doesn't require changing plugin
@@ -19,4 +21,5 @@ export const languageModes = [
 	gitignoreMode,
 	jsoncMode,
 	...communityLanguageModes,
+  ejsMode,
 ];

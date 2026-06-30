@@ -1,0 +1,41 @@
+# basic EJS block with expression
+<% if (user) { %>
+  <h2><%= user.name %></h2>
+<% } %>
+==>
+Template(EjsTag(EjsBlock(BlockStart,Content,TagEnd)),Text,EjsTag(EjsExpression(ExprStart,Content,TagEnd)),Text,EjsTag(EjsBlock(BlockStart,Content,TagEnd)))
+
+# HTML comment containing EJS stays inert
+<% if (user) { %>
+  <!-- <h2><%= user.name %></h2> -->
+<% } %>
+==>
+Template(EjsTag(EjsBlock(BlockStart,Content,TagEnd)),Text,HtmlComment,Text,EjsTag(EjsBlock(BlockStart,Content,TagEnd)))
+
+# EJS comment wrapping EJS source
+<%# <% if (user) { %>
+  <h2><%= user.name %></h2>
+<% } %> %>
+==>
+Template(EjsComment)
+
+# nested EJS blocks around HTML
+<% if (user) { %>
+  <h2><%= user.name %></h2>
+  <% if('id' in user) { %>
+  <% } %>
+<% } %>
+==>
+Template(EjsTag(EjsBlock(BlockStart,Content,TagEnd)),Text,EjsTag(EjsExpression(ExprStart,Content,TagEnd)),Text,EjsTag(EjsBlock(BlockStart,Content,TagEnd)),Text,EjsTag(EjsBlock(BlockStart,Content,TagEnd)),Text,EjsTag(EjsBlock(BlockStart,Content,TagEnd)))
+
+# plain text
+my title
+==>
+Template(Text)
+
+# multiline expression
+<%=
+user.name
+%>
+==>
+Template(EjsTag(EjsExpression(ExprStart,Content,TagEnd)))

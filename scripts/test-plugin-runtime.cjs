@@ -67,6 +67,7 @@ async function test() {
 		"pkl",
 		"svelte",
 		"wgsl",
+		"ejs",
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
@@ -122,6 +123,7 @@ message:
 		pkl: 'name = "example"',
 		svelte: "<script>let x = 1;</script><p>{x}</p>",
 		wgsl: "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }",
+		ejs: "<% if (user) { %>\n<h2><%= user.name %></h2>\n<% } %>",
 	};
 
 	for (const [name, source] of Object.entries(samples)) {

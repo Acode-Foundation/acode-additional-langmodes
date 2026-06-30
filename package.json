@@ -9,8 +9,11 @@
   "dependencies": {
     "@citedrive/codemirror-lang-bibtex": "^6.4.1",
     "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/language": "^6.12.3",
     "@iizukak/codemirror-lang-wgsl": "^0.3.0",
+    "@lezer/common": "^1.5.2",
     "@lezer/highlight": "^1.2.3",
     "@lezer/lr": "^1.4.10",
     "@replit/codemirror-lang-svelte": "^6.0.0",
@@ -33,7 +36,7 @@
   },
   "scripts": {
     "dev": "node esbuild.config.mjs --serve",
-    "generate": "lezer-generator src/languages/asciidoc/asciidoc.grammar -o src/languages/asciidoc/parser.js && lezer-generator src/languages/assembly/assembly.grammar -o src/languages/assembly/parser.js && lezer-generator src/languages/autohotkey/autohotkey.grammar -o src/languages/autohotkey/parser.js && lezer-generator src/languages/zig/zig.grammar -o src/languages/zig/parser.js && lezer-generator src/languages/jsonc/jsonc.grammar -o src/languages/jsonc/parser.js",
+    "generate": "lezer-generator src/languages/asciidoc/asciidoc.grammar -o src/languages/asciidoc/parser.js && lezer-generator src/languages/assembly/assembly.grammar -o src/languages/assembly/parser.js && lezer-generator src/languages/autohotkey/autohotkey.grammar -o src/languages/autohotkey/parser.js && lezer-generator src/languages/zig/zig.grammar -o src/languages/zig/parser.js && lezer-generator src/languages/jsonc/jsonc.grammar -o src/languages/jsonc/parser.js && lezer-generator src/languages/ejs/ejs.grammar -o src/languages/ejs/parser.js",
     "build": "npm run generate && node esbuild.config.mjs",
     "test": "npm run generate && node scripts/test-parser.mjs",
     "check": "npm run generate && tsc --noEmit && node scripts/test-parser.mjs && npm run build && node scripts/test-plugin-runtime.cjs"
