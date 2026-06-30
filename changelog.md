@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Added new modes:
+    - Jsonc
+    - Assembly
+    - ASCIIDoc
+    - Ejs
+
 ## 1.0.1
 
 - fixed bibtex mode issue

@@ -3,7 +3,7 @@
     "id": "acode.additional.langmodes",
     "name": "Additional Language Modes",
     "main": "main.js",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "repository": "https://github.com/Acode-Foundation/acode-additional-langmodes",
     "icon": "icon.png",
     "minVersionCode": 290,
@@ -23,7 +23,7 @@
     "permissions": [],
     "author": {
         "name": "Acode-Foundation",
-        "email": "",
+        "email": "contact@acode.app",
         "github": "Acode-Foundation"
     }
 }
