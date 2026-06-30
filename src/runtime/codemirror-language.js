@@ -15,7 +15,6 @@ export const {
 	flatIndent,
 	getIndentation,
 	getIndentUnit,
-	indentService,
 	indentString,
 	indentNodeProp,
 	indentService,
