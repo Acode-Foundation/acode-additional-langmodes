@@ -16,6 +16,15 @@ import { parseMixed } from "@lezer/common";
 import { styleTags, tags as t } from "@lezer/highlight";
 import { parser } from "./parser";
 
+// Follows the Codemirror Language Pattern.
+// Uses the following grammars (with certain modifications to support other things):
+// 1. https://github.com/dannyhw/ejs-language-tools/blob/main/syntaxes/js-ejs-injection.tmLanguage.json
+// 2. https://github.com/Digitalbrainstem/ejs-grammar/blob/master/syntaxes/ejs.json
+// other things such as html comments inside ejs block, ejs comments special cases, and ...
+// Eyes on Javascript Highlighting, html autocompletion inside ejs blocks.
+// Written by [UnschooledGamer](https://github.com/UnschooledGamer) & Handled by Acode-Foundation.
+// Under the Same License as Project's License File at https://github.com/Acode-Foundation/acode-additional-langmodes.
+
 const htmlSupport = html({ matchClosingTags: false });
 const javascriptSupport = javascript();
 
