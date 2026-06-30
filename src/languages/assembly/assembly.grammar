@@ -1,0 +1,208 @@
+@top Program { Line* }
+
+Line {
+  LineContent LineEnd |
+  LineEnd
+}
+
+LineContent {
+  Label (ConstDefinition OperandItem* | Directive OperandItem* | Instruction OperandItem*)? |
+  ConstDefinition OperandItem* |
+  Directive OperandItem* |
+  Instruction OperandItem*
+}
+
+ConstDefinition { constKw Identifier }
+Directive { DirectiveName }
+Instruction { Identifier }
+
+OperandItem {
+  Register |
+  Qualifier |
+  Address |
+  Number |
+  String |
+  Identifier |
+  Operator |
+  Bracket |
+  Separator
+}
+
+@tokens {
+  whitespace { $[ \t\r]+ }
+  LineEnd { "\n" }
+
+  LineComment {
+    ";" ![\n]* |
+    "//" ![\n]* |
+    "#" ![0-9xX$+.\n-] ![\n]* |
+    "#"
+  }
+  BlockComment { "/*" (![*] | "*" ![/])* ("*/" | "") }
+
+  Label { ($[A-Za-z_.$@?] $[A-Za-z0-9_.$@?]* | @digit+) ":" }
+  constKw { "const" }
+  DirectiveName {
+    "." $[A-Za-z_] $[A-Za-z0-9_.]* |
+    "align" |
+    "absolute" |
+    "bits" |
+    "common" |
+    "cpu" |
+    "db" |
+    "dd" |
+    "def" |
+    "default" |
+    "do" |
+    "dq" |
+    "dt" |
+    "dw" |
+    "dy" |
+    "dz" |
+    "else" |
+    "elseif" |
+    "end" |
+    "endif" |
+    "endm" |
+    "endmacro" |
+    "equ" |
+    "extern" |
+    "export" |
+    "global" |
+    "group" |
+    "if" |
+    "ifdef" |
+    "ifndef" |
+    "import" |
+    "incbin" |
+    "include" |
+    "org" |
+    "private" |
+    "public" |
+    "resb" |
+    "resd" |
+    "resq" |
+    "rest" |
+    "resw" |
+    "section" |
+    "segment" |
+    "struc" |
+    "struct" |
+    "times" |
+    "use16" |
+    "use32" |
+    "use64"
+  }
+  Qualifier {
+    "byte" |
+    "word" |
+    "dword" |
+    "qword" |
+    "tword" |
+    "oword" |
+    "yword" |
+    "zword" |
+    "ptr" |
+    "rel" |
+    "near" |
+    "far" |
+    "offset" |
+    "short" |
+    "high" |
+    "low" |
+    "high16" |
+    "low16"
+  }
+  Register {
+    "%"?
+    (
+      "al" | "ah" | "bl" | "bh" | "cl" | "ch" | "dl" | "dh" |
+      "ax" | "bx" | "cx" | "dx" | "si" | "di" | "sp" | "bp" |
+      "eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp" | "ebp" |
+      "rax" | "rbx" | "rcx" | "rdx" | "rsi" | "rdi" | "rsp" | "rbp" |
+      "rip" | "eip" | "ip" |
+      "cs" | "ds" | "es" | "fs" | "gs" | "ss" |
+      "st" | "flags" | "eflags" | "rflags" |
+      "lr" | "pc" | "fp" | "ip0" | "ip1" | "cpsr" | "spsr" |
+      "wzr" | "xzr" | "zero" | "ra" | "gp" | "tp" |
+      ("r" @digit+) |
+      ("cr" @digit+) |
+      ("dr" @digit+) |
+      ("x" @digit+) |
+      ("w" @digit+) |
+      ("v" @digit+) |
+      ("q" @digit+) |
+      ("d" @digit+) |
+      ("s" @digit+) |
+      ("h" @digit+) |
+      ("b" @digit+) |
+      ("z" @digit+) |
+      ("f" @digit+) |
+      ("p" @digit+) |
+      ("a" @digit+) |
+      ("t" @digit+) |
+      ("fa" @digit+) |
+      ("ft" @digit+) |
+      ("fs" @digit+) |
+      ("xmm" @digit+) |
+      ("ymm" @digit+) |
+      ("zmm" @digit+) |
+      ("mm" @digit+) |
+      ("st" @digit+) |
+      ("k" @digit+)
+    )
+  }
+  Address { $[=$] $[A-Za-z_.$@?] $[A-Za-z0-9_.$@?]* }
+  Identifier { $[A-Za-z_.$@?] $[A-Za-z0-9_.$@?]* }
+  Number {
+    "#" ? "-"? (
+      @digit @digit* ("_" @digit+)* |
+      ("0x" | "0X" | "$") $[0-9A-Fa-f] $[0-9A-Fa-f_]* |
+      ("0b" | "0B") $[01] $[01_]* |
+      @digit @digit* "." @digit* |
+      "." @digit @digit*
+    )
+  }
+  String {
+    '"' ( "\\" ![\n] | !["\\\n] )* ('"' | "") |
+    "'" ( "\\" ![\n] | !['\\\n] )* ("'" | "")
+  }
+  Operator {
+    "<<" |
+    ">>" |
+    "+" |
+    "-" |
+    "*" |
+    "/" |
+    "%" |
+    "|" |
+    "^" |
+    "&" |
+    "!" |
+    "~" |
+    "="
+  }
+  Bracket { "(" | ")" | "[" | "]" | "{" | "}" }
+  Separator { "," | ":" }
+
+  @precedence {
+    LineComment,
+    BlockComment,
+    Label,
+    constKw,
+    DirectiveName,
+    Register,
+    Qualifier,
+    Address,
+    Number,
+    String,
+    Identifier,
+    Operator,
+    Bracket,
+    Separator
+  }
+}
+
+@skip { whitespace | LineComment | BlockComment }
+
+@detectDelim

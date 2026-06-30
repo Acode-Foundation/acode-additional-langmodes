@@ -12,6 +12,8 @@
         "codemirror",
         "language",
         "syntax",
+        "asciidoc",
+        "assembly",
         "autohotkey",
         "zig",
         "svelte",

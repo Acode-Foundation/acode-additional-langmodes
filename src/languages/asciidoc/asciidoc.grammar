@@ -1,0 +1,236 @@
+@top Document { Element* }
+
+Element {
+  CommentBlock |
+  ListingBlock |
+  LiteralBlock |
+  PassthroughBlock |
+  TableBlock |
+  DelimitedBlock |
+  Heading |
+  AttributeEntry |
+  ElementAttribute |
+  BlockTitle |
+  Admonition |
+  ListItem |
+  DescriptionListItem |
+  CalloutListItem |
+  BlockMacro |
+  LineComment |
+  ParagraphLine |
+  LineEnd
+}
+
+Heading {
+  Heading1 |
+  Heading2 |
+  Heading3 |
+  Heading4 |
+  Heading5 |
+  Heading6
+}
+
+Heading1 { Heading1Marker InlineElement* LineEnd }
+Heading2 { Heading2Marker InlineElement* LineEnd }
+Heading3 { Heading3Marker InlineElement* LineEnd }
+Heading4 { Heading4Marker InlineElement* LineEnd }
+Heading5 { Heading5Marker InlineElement* LineEnd }
+Heading6 { Heading6Marker InlineElement* LineEnd }
+
+AttributeEntry { AttributeLine LineEnd }
+ElementAttribute { ElementAttributeLine LineEnd }
+BlockTitle { BlockTitleLine LineEnd }
+Admonition { AdmonitionMarker InlineElement* LineEnd }
+ListItem { ListMarker InlineElement* LineEnd }
+DescriptionListItem { DescriptionListLine LineEnd }
+CalloutListItem { CalloutListMarker InlineElement* LineEnd }
+BlockMacro { BlockMacroLine LineEnd }
+LineComment { LineCommentText LineEnd }
+ParagraphLine { InlineElement InlineElement* LineEnd }
+
+CommentBlock { CommentFence LineEnd BlockContent* CommentFence LineEnd }
+ListingBlock { ListingFence LineEnd BlockContent* ListingFence LineEnd }
+LiteralBlock { LiteralFence LineEnd BlockContent* LiteralFence LineEnd }
+PassthroughBlock { PassthroughFence LineEnd BlockContent* PassthroughFence LineEnd }
+TableBlock { TableFence LineEnd TableContent* TableFence LineEnd }
+DelimitedBlock { DelimitedFence LineEnd BlockContent* DelimitedFence LineEnd }
+
+BlockContent { BlockBodyLine LineEnd | LineEnd }
+TableContent { TableSeparator | TableBodyLine | LineEnd }
+
+InlineElement {
+  Url |
+  Email |
+  Xref |
+  InlineAnchor |
+  BibliographyAnchor |
+  Counter |
+  IntrinsicAttribute |
+  AttributeReference |
+  InlineMacro |
+  Replacement |
+  Escape |
+  Strong |
+  Emphasis |
+  Monospace |
+  Literal |
+  Highlight |
+  Superscript |
+  Subscript |
+  Callout |
+  Word |
+  Punctuation
+}
+
+@tokens {
+  whitespace { $[ \t]+ }
+  LineEnd { "\r\n" | "\n" | "\r" }
+
+  CommentFence { "////" "/"* }
+  ListingFence { "----" "-"* }
+  LiteralFence { "...." "."* }
+  PassthroughFence { "++++" "+"* }
+  TableFence { "|===" | "!===" | ",===" | ":===" }
+  DelimitedFence {
+    "====" "="* |
+    "****" "*"* |
+    "____" "_"* |
+    "--" |
+    "'''" "'"*
+  }
+
+  Heading6Marker { "======" }
+  Heading5Marker { "=====" }
+  Heading4Marker { "====" }
+  Heading3Marker { "===" }
+  Heading2Marker { "==" }
+  Heading1Marker { "=" }
+
+  AttributeLine { ":" ![: \t\n\r] ![:\n\r]* ":" ![\n\r]* }
+  ElementAttributeLine { "[" ![\]\n\r]* "]" }
+  BlockTitleLine { "." ![. \t\n\r] ![\n\r]* }
+  AdmonitionMarker {
+    "NOTE:" |
+    "TIP:" |
+    "IMPORTANT:" |
+    "WARNING:" |
+    "CAUTION:"
+  }
+  ListMarker {
+    ("*" | "**" | "***" | "****" | "*****" | "-" | "." | ".." | "..." | "...." | ".....") $[ \t]+ |
+    @digit+ ("." | ")") $[ \t]+ |
+    $[A-Za-z] "." $[ \t]+ |
+    $[iIvVxXmM]+ ")" $[ \t]+ |
+    ("*" | "-" ) $[ \t]+ "[" (" " | "x" | "X" | "*") "]" $[ \t]+
+  }
+  DescriptionListLine { $[A-Za-z0-9_] ![:\n\r]* ("::" | ":::" | "::::" | ";;") ![\n\r]* }
+  CalloutListMarker { ("<" @digit+ ">" | @digit+ ">" | ">") $[ \t]+ }
+  BlockMacroLine { $[A-Za-z] $[A-Za-z0-9_.-]* "::" ![\n\r]* }
+  LineCommentText { "//" ![\n\r]* }
+
+  Url {
+    ("http://" | "https://" | "ftp://" | "file://" | "mailto:" | "callto:")
+    ![ \t\n\r\[]+
+    ("[" ![\]\n\r]* "]")?
+  }
+  Email { $[A-Za-z0-9_] $[A-Za-z0-9_.+-]* "@" $[A-Za-z0-9_.-]+ }
+  Xref { "<<" ![>\n\r]+ ">>" }
+  InlineAnchor { "[[" ![\]\n\r]+ "]]" | "[#" ![\]\n\r]+ "]" }
+  BibliographyAnchor { "[[[" ![\]\n\r]+ "]]]" }
+  Counter { "{counter" "2"? ":" $[A-Za-z0-9_] $[A-Za-z0-9_-]* (":" $[A-Za-z0-9]+)? "}" }
+  IntrinsicAttribute {
+    "{startsb}" | "{endsb}" | "{vbar}" | "{caret}" | "{asterisk}" |
+    "{tilde}" | "{plus}" | "{backslash}" | "{backtick}" | "{blank}" |
+    "{empty}" | "{sp}" | "{two-colons}" | "{two-semicolons}" |
+    "{nbsp}" | "{deg}" | "{zwsp}" | "{quot}" | "{apos}" |
+    "{lsquo}" | "{rsquo}" | "{ldquo}" | "{rdquo}" | "{wj}" |
+    "{brvbar}" | "{pp}" | "{cpp}" | "{amp}" | "{lt}" | "{gt}"
+  }
+  AttributeReference { "{" $[A-Za-z0-9_] $[A-Za-z0-9_-]* "}" }
+  InlineMacro {
+    $[A-Za-z] $[A-Za-z0-9_.-]* ":" ![ \t\n\r\[]* "[" ![\]\n\r]* "]" |
+    $[A-Za-z] $[A-Za-z0-9_.-]* "::" ![ \t\n\r\[]* "[" ![\]\n\r]* "]"
+  }
+  Replacement {
+    "(C)" | "(R)" | "(TM)" | "`'" | "->" | "=>" | "<-" | "<=" |
+    "&#" @digit+ ";" |
+    "&#x" $[A-Fa-f0-9]+ ";"
+  }
+  Escape { "\\" ![\n\r] }
+  Strong {
+    "**" ![* \t\n\r] (![\n\r])* "**" |
+    "*" ![* \t\n\r] (![*\n\r])* "*"
+  }
+  Emphasis {
+    "__" ![_ \t\n\r] (![\n\r])* "__" |
+    "_" ![_ \t\n\r] (![_\n\r])* "_"
+  }
+  Monospace { "`" ![` \t\n\r] (![`\n\r])* "`" }
+  Literal {
+    "+++" (![\n\r])* "+++" |
+    "++" ![+ \t\n\r] (![\n\r])* "++" |
+    "+" ![+ \t\n\r] (![+\n\r])* "+" |
+    "$$" (![\n\r])* "$$"
+  }
+  Highlight {
+    "##" ![# \t\n\r] (![\n\r])* "##" |
+    "#" ![# \t\n\r] (![#+\n\r])* "#"
+  }
+  Superscript { "^" ![ \t\n\r^]+ "^" }
+  Subscript { "~" ![ \t\n\r~]+ "~" }
+  Callout { "<" @digit+ ">" }
+  TableSeparator { "|" | "!" | "," | ":" }
+  TableBodyLine { ![ \t\n\r|!,:] ![\n\r]* }
+  Word { $[A-Za-z0-9_\u{a1}-\u{10ffff}]+ }
+  Punctuation { $[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~] }
+  BlockBodyLine { ![ \t\n\r] ![\n\r]* }
+
+  @precedence {
+    CommentFence,
+    ListingFence,
+    LiteralFence,
+    PassthroughFence,
+    TableFence,
+    DelimitedFence,
+    Heading6Marker,
+    Heading5Marker,
+    Heading4Marker,
+    Heading3Marker,
+    Heading2Marker,
+    Heading1Marker,
+    AttributeLine,
+    ElementAttributeLine,
+    BlockTitleLine,
+    AdmonitionMarker,
+    ListMarker,
+    DescriptionListLine,
+    CalloutListMarker,
+    BlockMacroLine,
+    LineCommentText,
+    Url,
+    Email,
+    Xref,
+    InlineAnchor,
+    BibliographyAnchor,
+    Counter,
+    IntrinsicAttribute,
+    AttributeReference,
+    InlineMacro,
+    Strong,
+    Emphasis,
+    Monospace,
+    Literal,
+    Highlight,
+    Superscript,
+    Subscript,
+    Callout,
+    BlockBodyLine,
+    TableBodyLine,
+    Word,
+    Punctuation
+  }
+}
+
+@skip { whitespace }
+
+@detectDelim

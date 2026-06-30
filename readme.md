@@ -5,6 +5,8 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 ## Included modes
 
 - AutoHotkey (`.ahk`, `.ah1`, `.ah2`, `.ahk1`, `.ahk2`)
+- AsciiDoc (`.adoc`, `.asciidoc`, `.asc`)
+- Assembly (`.asm`, `.s`, `.S`, `.nasm`)
 - Zig (`.zig`, `.zon`)
 - Git ignore (`.gitignore`, `.ignore`, Git exclude-style files)
 - JSONC (`.jsonc`)

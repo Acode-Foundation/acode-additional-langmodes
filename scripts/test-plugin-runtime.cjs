@@ -49,6 +49,8 @@ async function test() {
 
 	const modes = new Map(registered.map((mode) => [mode.name, mode]));
 	const expectedNames = [
+		"asciidoc",
+		"assembly",
 		"autohotkey",
 		"zig",
 		"gitignore",
@@ -67,12 +69,43 @@ async function test() {
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
+	assert(modes.get("asciidoc").extensions.includes("adoc"));
+	assert(modes.get("assembly").extensions.includes("asm"));
 	assert(modes.get("autohotkey").extensions.includes("ahk"));
 	assert(modes.get("zig").extensions.includes("zon"));
 	assert(modes.get("gitignore").extensions.includes("gitignore"));
 	assert(modes.get("jsonc").extensions.includes("jsonc"));
 
 	const samples = {
+		asciidoc: `= Project Notes
+:toc:
+
+NOTE: Review <<setup,setup>> before running.
+
+[#setup]
+== Setup
+
+* [x] Install dependencies
+* Run \`npm test\`
+
+[source,asm]
+----
+_start:
+  mov eax, 1 <1>
+----
+
+<1> Exit syscall.
+`,
+		assembly: `.text
+.global _start
+_start:
+  mov eax, 1
+  mov ebx, message
+  int 0x80
+
+message:
+  .asciz "ok"
+`,
 		autohotkey: "MsgBox('ok')",
 		zig: 'const std = @import("std");',
 		gitignore: "# build output\ndist/\n!important.log\n*.tmp\n",
@@ -104,11 +137,29 @@ async function test() {
 			doc: source,
 			extensions: [support],
 		});
-		assert.equal(
-			support.language.parser.parse(source).length,
-			source.length,
-			`${name} did not parse the full fixture`,
-		);
+		const tree = support.language.parser.parse(source);
+		assert.equal(tree.length, source.length, `${name} did not parse the full fixture`);
+		if (name === "asciidoc" || name === "assembly") {
+			const nodeNames = new Set();
+			const errors = [];
+			tree.iterate({
+				enter(node) {
+					nodeNames.add(node.name);
+					if (node.type.isError) errors.push([node.from, node.to]);
+				},
+			});
+			assert.equal(errors.length, 0, `${name} produced parse errors`);
+			const expectedNodes =
+				name === "asciidoc"
+					? ["Heading1", "Heading2", "AttributeLine", "Xref", "ListingBlock", "ListItem"]
+					: ["DirectiveName", "Label", "Instruction", "Register", "String"];
+			for (const nodeName of expectedNodes) {
+				assert(
+					nodeNames.has(nodeName),
+					`${name} did not produce ${nodeName}`,
+				);
+			}
+		}
 	}
 
 	await unmountPlugin();
