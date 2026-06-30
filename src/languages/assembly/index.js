@@ -1,5 +1,12 @@
 import { completeFromList } from "@codemirror/autocomplete";
-import { LanguageSupport, LRLanguage } from "@codemirror/language";
+import {
+	continuedIndent,
+	delimitedIndent,
+	indentNodeProp,
+	indentService,
+	LanguageSupport,
+	LRLanguage,
+} from "@codemirror/language";
 import { styleTags, tags as t } from "@lezer/highlight";
 import { parser } from "./parser";
 
@@ -422,6 +429,115 @@ const registers = [
 	"tp",
 ];
 
+const labelPattern = /^\s*(?:[A-Za-z_.$@?][A-Za-z0-9_.$@?]*|\d+):(?:\s|$)/;
+const sectionDirectivePattern = /^\s*(?:\.?(?:text|data|bss|rodata|section|segment)\b)/i;
+const blockOpenPattern = /^\s*\.?(?:macro|if|ifdef|ifndef|ifeq|ifne|ifgt|iflt|ifge|ifle|rept|irp|irpc|struct|struc)\b/i;
+const blockClosePattern = /^\s*\.?(?:endm|endmacro|endif|endr|ends|endstruc|endstruct)\b/i;
+const blockMiddlePattern = /^\s*\.?(?:else|elseif|elif)\b/i;
+const closingOperandPattern = /^\s*[\])}]/;
+
+function previousNonEmptyLine(doc, lineNumber) {
+	for (let number = lineNumber - 1; number > 0; number--) {
+		const line = doc.line(number);
+		if (line.text.trim()) return line;
+	}
+	return null;
+}
+
+function hasOpenOperand(text) {
+	let paren = 0;
+	let bracket = 0;
+	let brace = 0;
+	let quote = "";
+	let escaped = false;
+
+	for (const char of text) {
+		if (quote) {
+			if (escaped) {
+				escaped = false;
+			} else if (char === "\\") {
+				escaped = true;
+			} else if (char === quote) {
+				quote = "";
+			}
+			continue;
+		}
+		if (char === '"' || char === "'") {
+			quote = char;
+		} else if (char === "(") {
+			paren++;
+		} else if (char === ")" && paren) {
+			paren--;
+		} else if (char === "[") {
+			bracket++;
+		} else if (char === "]" && bracket) {
+			bracket--;
+		} else if (char === "{") {
+			brace++;
+		} else if (char === "}" && brace) {
+			brace--;
+		}
+	}
+
+	return paren > 0 || bracket > 0 || brace > 0;
+}
+
+function isContinuedOperand(text) {
+	return /(?:,\s*|[+\-*/%|^&=<>]\s*)$/.test(text) || hasOpenOperand(text);
+}
+
+function blockIndentBefore(doc, uptoLineNumber, unit) {
+	let indent = 0;
+	let afterLabel = false;
+
+	for (let number = 1; number < uptoLineNumber; number++) {
+		const text = doc.line(number).text;
+		const trimmed = text.trim();
+		if (!trimmed) continue;
+
+		if (blockClosePattern.test(trimmed) || blockMiddlePattern.test(trimmed)) {
+			indent = Math.max(0, indent - unit);
+		}
+
+		if (sectionDirectivePattern.test(trimmed)) {
+			afterLabel = false;
+		} else if (labelPattern.test(trimmed)) {
+			afterLabel = true;
+		}
+
+		if (blockOpenPattern.test(trimmed) || blockMiddlePattern.test(trimmed)) {
+			indent += unit;
+			afterLabel = false;
+		}
+	}
+
+	return indent + (afterLabel ? unit : 0);
+}
+
+function assemblyIndent(context, pos) {
+	const doc = context.state.doc;
+	const line = doc.lineAt(pos);
+	const textAfter = line.text.slice(pos - line.from);
+	const trimmed = textAfter.trim();
+	const previous = previousNonEmptyLine(doc, line.number);
+	let indent = blockIndentBefore(doc, line.number, context.unit);
+
+	if (blockClosePattern.test(trimmed) || blockMiddlePattern.test(trimmed)) {
+		indent = Math.max(0, indent - context.unit);
+	}
+	if (labelPattern.test(trimmed) || sectionDirectivePattern.test(trimmed)) {
+		return Math.max(0, indent - context.unit);
+	}
+	if (closingOperandPattern.test(trimmed)) {
+		indent = Math.max(0, indent - context.unit);
+	}
+	if (previous && isContinuedOperand(previous.text.trim())) {
+		indent += context.unit;
+	}
+
+	return indent;
+}
+
 const configuredParser = parser.configure({
 	props: [
 		styleTags({
@@ -441,6 +557,11 @@ const configuredParser = parser.configure({
 			Bracket: t.bracket,
 			Separator: t.separator,
 		}),
+		indentNodeProp.add({
+			LineContent: continuedIndent({ except: /^(?:\s*(?:[A-Za-z_.$@?][A-Za-z0-9_.$@?]*|\d+):|\s*\.?(?:endm|endmacro|endif|endr|ends|endstruc|endstruct)\b)/i }),
+			OperandItem: continuedIndent(),
+			Bracket: delimitedIndent({ closing: "]", align: false }),
+		}),
 	],
 });
 
@@ -453,6 +574,8 @@ export const assemblyLanguage = LRLanguage.define({
 			block: { open: "/*", close: "*/" },
 		},
 		closeBrackets: { brackets: ["(", "[", "{", '"', "'"] },
+		indentOnInput:
+			/^\s*(?:[\])}]|\.?(?:else|elseif|elif|endm|endmacro|endif|endr|ends|endstruc|endstruct)\b|(?:[A-Za-z_.$@?][A-Za-z0-9_.$@?]*|\d+):(?:\s|$))/i,
 		wordChars: "%.$_",
 	},
 });
@@ -466,8 +589,13 @@ const assemblyCompletion = assemblyLanguage.data.of({
 	]),
 });
 
+const assemblyIndentation = indentService.of(assemblyIndent);
+
 export function assembly() {
-	return new LanguageSupport(assemblyLanguage, [assemblyCompletion]);
+	return new LanguageSupport(assemblyLanguage, [
+		assemblyCompletion,
+		assemblyIndentation,
+	]);
 }
 
 export const assemblyMode = {

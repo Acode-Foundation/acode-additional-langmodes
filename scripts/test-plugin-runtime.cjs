@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const { EditorState } = require("@codemirror/state");
+const { getIndentation, indentUnit } = require("@codemirror/language");
 
 const runtimeModules = {
 	"@codemirror/autocomplete": require("@codemirror/autocomplete"),
@@ -133,9 +134,9 @@ message:
 				"bibtex should not enable package autocomplete or linter extensions",
 			);
 		}
-		EditorState.create({
+		const state = EditorState.create({
 			doc: source,
-			extensions: [support],
+			extensions: [support, indentUnit.of("  ")],
 		});
 		const tree = support.language.parser.parse(source);
 		assert.equal(tree.length, source.length, `${name} did not parse the full fixture`);
@@ -161,6 +162,53 @@ message:
 			}
 		}
 	}
+
+	const asciidocSupport = modes.get("asciidoc").load();
+	const asciidocIndentState = EditorState.create({
+		doc: "* item\n\n----\ncode\n----\n",
+		extensions: [asciidocSupport, indentUnit.of("  ")],
+	});
+	assert.equal(
+		getIndentation(asciidocIndentState, asciidocIndentState.doc.line(2).from),
+		2,
+		"asciidoc should indent list continuation lines after the marker",
+	);
+	assert.equal(
+		getIndentation(asciidocIndentState, asciidocIndentState.doc.line(4).from),
+		0,
+		"asciidoc should preserve delimited block content indentation",
+	);
+
+	const assemblySupport = modes.get("assembly").load();
+	const assemblyIndentState = EditorState.create({
+		doc: ".macro exit code\nmov eax,\n]\n.endm\n\n_start:\nmov eax, 1\n.text\n",
+		extensions: [assemblySupport, indentUnit.of("  ")],
+	});
+	assert.equal(
+		getIndentation(assemblyIndentState, assemblyIndentState.doc.line(2).from),
+		2,
+		"assembly should indent inside macro blocks",
+	);
+	assert.equal(
+		getIndentation(assemblyIndentState, assemblyIndentState.doc.line(3).from),
+		2,
+		"assembly should outdent closing operand delimiters after continued operands",
+	);
+	assert.equal(
+		getIndentation(assemblyIndentState, assemblyIndentState.doc.line(4).from),
+		0,
+		"assembly should outdent macro closing directives",
+	);
+	assert.equal(
+		getIndentation(assemblyIndentState, assemblyIndentState.doc.line(7).from),
+		2,
+		"assembly should indent instructions after labels",
+	);
+	assert.equal(
+		getIndentation(assemblyIndentState, assemblyIndentState.doc.line(8).from),
+		0,
+		"assembly section directives should reset to the section column",
+	);
 
 	await unmountPlugin();
 	assert.deepEqual(unregistered, [...expectedNames].reverse());
