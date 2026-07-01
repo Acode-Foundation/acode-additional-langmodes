@@ -124,11 +124,11 @@ function ejsIndentAt(state, pos, simulatedBreak) {
   const firstBlock = blocks.find((block) => block.lineFrom === line.from);
   if (firstBlock?.closes) {
     const opener = stack[stack.length - 1];
-    return opener ? columnAt(state, opener.from) : 0;
+    return opener ? columnAt(state, opener.from) : undefined;
   }
 
   const opener = stack[stack.length - 1];
-  return opener ? columnAt(state, opener.from + 2) : 0;
+  return opener ? columnAt(state, opener.from + 2) : undefined;
 }
 
 function ejsFold(state, lineStart, lineEnd) {
