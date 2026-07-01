@@ -7,6 +7,7 @@ import { zigMode } from "./zig";
 import { jsoncMode } from "./jsonc";
 
 import { ejsMode } from "./ejs"
+import { gitattributesMode } from "./gitattributes";
 
 /**
  * Add future language descriptors here. Each descriptor owns its metadata and
@@ -22,4 +23,5 @@ export const languageModes = [
 	jsoncMode,
 	...communityLanguageModes,
   ejsMode,
+  gitattributesMode,
 ];

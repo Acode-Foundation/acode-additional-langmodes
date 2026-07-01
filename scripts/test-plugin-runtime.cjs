@@ -68,6 +68,7 @@ async function test() {
 		"svelte",
 		"wgsl",
 		"ejs",
+		"gitattributes",
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
@@ -124,6 +125,7 @@ message:
 		svelte: "<script>let x = 1;</script><p>{x}</p>",
 		wgsl: "@vertex fn main() -> @builtin(position) vec4f { return vec4f(); }",
 		ejs: "<% if (user) { %>\n<h2><%= user.name %></h2>\n<% } %>",
+		gitattributes: "# comment\n*.txt text eol=lf\n",
 	};
 
 	for (const [name, source] of Object.entries(samples)) {

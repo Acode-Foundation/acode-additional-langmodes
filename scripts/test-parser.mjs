@@ -342,3 +342,63 @@ try {
 } finally {
 	fs.rmSync(ejsBehaviorBundle, { force: true });
 }
+
+// Test GitAttributes Parser
+const { parser: gitattributesParser } = await bundledRequire(
+	"src/languages/gitattributes/parser.js",
+	"acode-gitattributes-parser-test.cjs",
+);
+
+const gitattributesSamples = [
+	{
+		name: "GitAttributes features",
+		source: `# This is a comment
+[attr]binary -diff -merge -text
+*.png filter=lfs diff=lfs merge=lfs -text
+"*.jpg" -text
+!important.txt text eol=lf
+[a-zA-Z]*.dat -text
+`,
+		nodes: [
+			"Comment",
+			"MacroDef",
+			"MacroTag",
+			"Word",
+			"AttrUnset",
+			"BuiltinAttr",
+			"AttrList",
+			"Pattern",
+			"Wildcard",
+			"ValAssign",
+			"StringVal",
+			"QuotedPattern",
+			"QuotedPatternElement",
+			"PatternNegation",
+			"RangeNotation",
+			"RangeChar",
+		],
+	},
+];
+
+for (const sample of gitattributesSamples) {
+	const tree = gitattributesParser.parse(sample.source);
+	const names = new Set();
+	const errors = [];
+
+	tree.iterate({
+		enter(node) {
+			names.add(node.name);
+			if (node.type.isError) {
+				errors.push([node.from, node.to]);
+			}
+		},
+	});
+
+	assert.equal(errors.length, 0, `${sample.name} produced parse errors`);
+	assert.equal(tree.length, sample.source.length, `${sample.name} was not fully parsed`);
+	for (const node of sample.nodes) {
+		assert(names.has(node), `${sample.name} did not produce ${node}`);
+	}
+}
+
+console.log(`Validated ${gitattributesSamples.length} GitAttributes parser fixtures.`);

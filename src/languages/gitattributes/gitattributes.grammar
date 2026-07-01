@@ -1,0 +1,104 @@
+@top File { (line | spaces | newline)* }
+
+line {
+  (Comment | MacroDef | AttrList) (newline | eof)
+}
+
+MacroDef {
+  MacroTag (BuiltinAttr | Word) (spaces Attribute)* spaces?
+}
+
+AttrList {
+  (Pattern | QuotedPattern) (spaces Attribute)* spaces?
+}
+
+Pattern {
+  PatternNegation?
+  patternPart+
+}
+
+patternPart {
+  Word |
+  PatternChar |
+  Wildcard |
+  EscapedChar |
+  RangeNotation |
+  dirSep
+}
+
+QuotedPattern {
+  "\""
+  PatternNegation?
+  quotedPatternPart*
+  "\""
+}
+
+quotedPatternPart {
+  QuotedPatternElement |
+  dirSep |
+  EscapedChar
+}
+
+RangeNotation {
+  "[" RangeNegation? (RangeChar | EscapedChar | CharacterClass | "-")+ "]"
+}
+
+Attribute {
+  (AttrReset | AttrUnset)? (BuiltinAttr | Word) (ValAssign)?
+}
+
+ValAssign {
+  "=" Value
+}
+
+Value {
+  BooleanVal |
+  StringVal
+}
+
+@tokens {
+  spaces { $[ \t]+ }
+  newline { "\r"? "\n" }
+  eof { @eof }
+
+  Comment { "#" ![\n\r]* }
+
+  MacroTag { "[attr]" }
+  
+  PatternNegation { "!" }
+  dirSep { "/" }
+  Wildcard { "?" | "**" | "*" }
+  EscapedChar { "\\" ![\n\r] }
+  
+  Word { $[A-Za-z0-9_.] $[A-Za-z0-9_.-]* }
+
+  PatternChar { ![ \t\r\n/?*\\\[\]#"!A-Za-z0-9_\-\.]+ }
+  
+  RangeNegation { "!" | "^" }
+  RangeChar { ![\n\r\-\[\]\\!^] }
+  CharacterClass { "[:" $[a-z]+ ":]" }
+
+  QuotedPatternElement { ![\r\n\\"!/]+ }
+
+  AttrReset { "!" }
+  AttrUnset { "-" }
+  
+  StringVal { ![ \t\r\n#]+ }
+}
+
+@external specialize { Word } specializeAttrName from "./specialize.js" {
+  BuiltinAttr
+}
+
+@external specialize { StringVal } specializeValue from "./specialize.js" {
+  BooleanVal
+}
+
+@precedence {
+  MacroTag,
+  Word,
+  PatternChar,
+  StringVal,
+  RangeChar,
+  QuotedPatternElement
+}

@@ -36,7 +36,7 @@
   },
   "scripts": {
     "dev": "node esbuild.config.mjs --serve",
-    "generate": "lezer-generator src/languages/asciidoc/asciidoc.grammar -o src/languages/asciidoc/parser.js && lezer-generator src/languages/assembly/assembly.grammar -o src/languages/assembly/parser.js && lezer-generator src/languages/autohotkey/autohotkey.grammar -o src/languages/autohotkey/parser.js && lezer-generator src/languages/zig/zig.grammar -o src/languages/zig/parser.js && lezer-generator src/languages/jsonc/jsonc.grammar -o src/languages/jsonc/parser.js && lezer-generator src/languages/ejs/ejs.grammar -o src/languages/ejs/parser.js",
+    "generate": "node scripts/generate-parsers.mjs",
     "build": "npm run generate && node esbuild.config.mjs",
     "test": "npm run generate && node scripts/test-parser.mjs",
     "check": "npm run generate && tsc --noEmit && node scripts/test-parser.mjs && npm run build && node scripts/test-plugin-runtime.cjs"
