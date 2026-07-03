@@ -23,6 +23,7 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - Pkl (`.pkl`)
 - Svelte (`.svelte`)
 - WGSL (`.wgsl`)
+- Gleam (`.gleam`)
 
 Community modes are registered only when Acode does not already provide a mode
 with the same name. Languages already covered by Acode's

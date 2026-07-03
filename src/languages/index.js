@@ -8,6 +8,7 @@ import { jsoncMode } from "./jsonc";
 
 import { ejsMode } from "./ejs"
 import { gitattributesMode } from "./gitattributes";
+import { gleamMode } from "./gleam";
 
 /**
  * Add future language descriptors here. Each descriptor owns its metadata and
@@ -24,4 +25,5 @@ export const languageModes = [
 	...communityLanguageModes,
   ejsMode,
   gitattributesMode,
+  gleamMode,
 ];

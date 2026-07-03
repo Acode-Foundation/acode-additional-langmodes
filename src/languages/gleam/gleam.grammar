@@ -1,0 +1,159 @@
+@top SourceFile { Element* }
+
+@precedence {
+  def,
+  call,
+  importAlias
+}
+
+Element {
+  ModuleComment |
+  DocComment |
+  LineComment |
+  Attribute |
+  String |
+  Float |
+  Integer |
+  Discard |
+  ImportStatement |
+  FunctionDefinition |
+  FunctionCall |
+  As | Assert | Case | Const | Echo | Else | Fn | If |
+  Let | Opaque | Panic | Pub | Todo | Type | Use |
+  True | False | Nil |
+  TypeName |
+  Identifier |
+  Operator |
+  Punctuation |
+  divOp |
+  dotOp |
+  Block |
+  Parenthesized |
+  Bracketed |
+  BitArray
+}
+
+Block { "{" Element* "}" }
+Parenthesized { "(" Element* ")" }
+Bracketed { "[" Element* "]" }
+BitArray { "<<" Element* ">>" }
+
+Attribute {
+  "@" Identifier !call "(" Element* ")" |
+  "@" Identifier
+}
+
+FunctionDefinition {
+  Fn !def Identifier
+}
+
+FunctionCall {
+  Identifier !call Parenthesized
+}
+
+ImportStatement {
+  !importAlias Import ModulePath (dotOp UnqualifiedImports)? (As (Identifier | Discard))?
+}
+
+ModulePath {
+  Identifier (!call divOp Identifier)*
+}
+
+UnqualifiedImports {
+  "{" (UnqualifiedImport ("," UnqualifiedImport)* ","?)? "}"
+}
+
+UnqualifiedImport {
+  Type? TypeName (As TypeName)? |
+  Identifier (As Identifier)?
+}
+
+As { @specialize<Identifier, "as"> }
+Assert { @specialize<Identifier, "assert"> }
+Case { @specialize<Identifier, "case"> }
+Const { @specialize<Identifier, "const"> }
+Echo { @specialize<Identifier, "echo"> }
+Else { @specialize<Identifier, "else"> }
+Fn { @specialize<Identifier, "fn"> }
+If { @specialize<Identifier, "if"> }
+Import { @specialize<Identifier, "import"> }
+Let { @specialize<Identifier, "let"> }
+Opaque { @specialize<Identifier, "opaque"> }
+Panic { @specialize<Identifier, "panic"> }
+Pub { @specialize<Identifier, "pub"> }
+Todo { @specialize<Identifier, "todo"> }
+Type { @specialize<Identifier, "type"> }
+Use { @specialize<Identifier, "use"> }
+
+True { @specialize<TypeName, "True"> }
+False { @specialize<TypeName, "False"> }
+Nil { @specialize<TypeName, "Nil"> }
+
+divOp { @specialize<Operator, "/"> }
+dotOp { @specialize<Punctuation, "."> }
+
+@tokens {
+  spaces { $[ \t]+ }
+  newline { "\r"? "\n" }
+
+  ModuleComment { "////" ![\n\r]* }
+  DocComment { "///" ![\n\r]* }
+  LineComment { "//" ![\n\r]* }
+
+  String {
+    '"' ( "\\" _ | !["\\\n\r] )* '"'
+  }
+
+  Float {
+    $[0-9] $[0-9_]* "." $[0-9_]* ($[eE] $[+-]? $[0-9_]+)? |
+    "-" $[0-9] $[0-9_]* "." $[0-9_]* ($[eE] $[+-]? $[0-9_]+)?
+  }
+
+  Integer {
+    ("0x" | "0X") $[0-9a-fA-F_]+ |
+    ("0o" | "0O") $[0-7_]+ |
+    ("0b" | "0B") $[01_]+ |
+    $[0-9] $[0-9_]* |
+    "-" $[0-9] $[0-9_]*
+  }
+
+  Discard { "_" $[a-zA-Z0-9_]* }
+
+  TypeName { $[A-Z] $[a-zA-Z0-9_]* }
+
+  Identifier { $[a-z_] $[a-zA-Z0-9_]* }
+
+  Operator {
+    "<-" | "->" | "<=" | ">=" | "==" | "!=" |
+    "<=." | ">=." | "<." | ">." |
+    "+." | "-." | "*." | "/." |
+    "+" | "-" | "*" | "/" | "%" |
+    "&&" | "||" | "!" |
+    "<>" | "|>" | "=" | "|" | ".." |
+    "<" | ">"
+  }
+
+  Punctuation {
+    "," | "." | ":" | ";" | "#"
+  }
+
+  "@" "{" "}" "(" ")" "[" "]" "<<" ">>"
+
+  @precedence {
+    ModuleComment,
+    DocComment,
+    LineComment,
+    String,
+    Float,
+    Integer,
+    TypeName,
+    Discard,
+    Identifier,
+    Operator,
+    Punctuation
+  }
+}
+
+@skip { spaces | newline }
+
+@detectDelim
