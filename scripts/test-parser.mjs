@@ -402,3 +402,89 @@ for (const sample of gitattributesSamples) {
 }
 
 console.log(`Validated ${gitattributesSamples.length} GitAttributes parser fixtures.`);
+
+// Test Gleam Parser
+const { parser: gleamParser } = await bundledRequire(
+	"src/languages/gleam/parser.js",
+	"acode-gleam-parser-test.cjs",
+);
+
+const gleamSamples = [
+	{
+		name: "Gleam comments, imports, types and functions",
+		source: `//// This is a module comment
+/// This is a doc comment
+// This is a line comment
+
+@target(javascript)
+import wibble/wobble.{type MyType, my_value}
+
+pub type MyResult(a) {
+  Ok(a)
+  Error(Nil)
+}
+
+pub fn main() -> Nil {
+  let x = 123
+  let f = 3.14
+  let s = "hello"
+  let b = True
+  let _discarded = False
+  io.println(s)
+  case x {
+    _ -> Nil
+  }
+  let list = [1, 2]
+  let tuple = #(1, 2)
+  let bits = <<1, 2>>
+}
+`,
+		nodes: [
+			"ModuleComment",
+			"DocComment",
+			"LineComment",
+			"Attribute",
+			"TypeName",
+			"Identifier",
+			"String",
+			"Integer",
+			"Float",
+			"True",
+			"False",
+			"Nil",
+			"FunctionDefinition",
+			"FunctionCall",
+			"Block",
+			"Parenthesized",
+			"Bracketed",
+			"BitArray",
+		],
+	},
+];
+
+for (const sample of gleamSamples) {
+	const tree = gleamParser.parse(sample.source);
+	const names = new Set();
+	const errors = [];
+
+	tree.iterate({
+		enter(node) {
+			names.add(node.name);
+			if (node.type.isError) {
+				errors.push([node.from, node.to]);
+			}
+		},
+	});
+
+	// Print all parsed node names to inspect them
+	console.log("Parsed Gleam nodes:", [...names]);
+
+	assert.equal(errors.length, 0, `${sample.name} produced parse errors`);
+	assert.equal(tree.length, sample.source.length, `${sample.name} was not fully parsed`);
+	for (const node of sample.nodes) {
+		assert(names.has(node), `${sample.name} did not produce ${node}`);
+	}
+}
+
+console.log(`Validated ${gleamSamples.length} Gleam parser fixtures.`);
+
