@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Added gleam language support
+
 ## 1.1.1
 
 - Added gitattributes modes and fixed indentation issue of ejs mode
