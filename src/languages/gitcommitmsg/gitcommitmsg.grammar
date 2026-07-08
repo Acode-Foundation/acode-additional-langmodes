@@ -1,0 +1,46 @@
+@top Program { Preamble DiffZone? }
+
+Preamble { (MessageLine | CommentLine)* }
+
+MessageLine { MessageNormal MessageWarn? MessageIllegal? }
+
+CommentLine {
+  CommentWhole |
+  CommentMarker (StatusChanged | StatusInserted | StatusDeleted | (FileType CommentColon CommentValue))
+}
+
+DiffZone { DiffBlock+ }
+
+DiffBlock { DiffGitLine (DiffMetaLine | DiffContextLine)* }
+
+Hunk { DiffHunkHeader (DiffAddedLine | DiffRemovedLine | DiffContextLine)* }
+
+@skip { newline }
+
+@tokens {
+  newline { $[\n]+ }
+}
+
+@external tokens diffGitLineTokenizer from "./tokens.js" { DiffGitLine }
+
+@external tokens preambleTokenizer from "./tokens.js" {
+  MessageNormal,
+  MessageWarn,
+  MessageIllegal,
+  CommentWhole,
+  CommentMarker,
+  StatusChanged,
+  StatusInserted,
+  StatusDeleted,
+  FileType,
+  CommentColon,
+  CommentValue
+}
+
+@external tokens diffContentTokenizer from "./tokens.js" {
+  DiffHunkHeader,
+  DiffMetaLine,
+  DiffAddedLine,
+  DiffRemovedLine,
+  DiffContextLine
+}
