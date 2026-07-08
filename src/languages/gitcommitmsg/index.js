@@ -30,7 +30,11 @@ const configuredParser = parser.configure({
       DiffRemovedLine: tags.deleted,
     }),
     foldNodeProp.add({
-      DiffBlock: foldInside,
+      DiffBlock(node) {
+        const header = node.firstChild;
+        if (!header || header.to >= node.to) return null;
+        return { from: header.to, to: node.to };
+      },
     }),
   ],
 });

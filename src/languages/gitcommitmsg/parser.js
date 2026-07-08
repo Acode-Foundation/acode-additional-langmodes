@@ -3,14 +3,14 @@ import {LRParser} from "@lezer/lr"
 import {diffGitLineTokenizer, preambleTokenizer, diffContentTokenizer} from "./tokens.js"
 export const parser = LRParser.deserialize({
   version: 14,
-  states: "$OOVQVOOOhQVO'#CpOOQU'#Cq'#CqO!PQTO'#CqOOQU'#Ct'#CtO!_QVO'#CoQ!pQROOOOQU,59[,59[O!uQVO,59[OOQU,59],59]O#ZQTO,59]OOQU-E6r-E6rO#`QZO'#CsOOQQ'#Cu'#CuO#nQRO'#CrQOQPOOOOQU1G.v1G.vO#vQTO1G.wOOQY'#Cv'#CvO#{QZO,59_OOQQ-E6s-E6sOOQU7+$c7+$cOOQY-E6t-E6t",
-  stateData: "$Z~OmOS~OQPOTQOUROPcPkcP~ORWOSVOPdXQdXTdXUdXkdX~OVXOWXOXXOYYO~OQPOTQOUROPcXkcX~OP[O~OS`OPdaQdaTdaUdakda~OZaO~O^bOabOPgXkgX~OP[OkfX~O[eO~O^bOabOPgakga~O",
-  goto: "!^kPPPPPPPPPPPPPPPPPPPloosvz!Q!WRUOTSOTR_UT]U^QTORZTQ^URd^Qc[Rfc",
-  nodeNames: "⚠ DiffGitLine MessageNormal MessageWarn MessageIllegal CommentWhole CommentMarker StatusChanged StatusInserted StatusDeleted FileType CommentColon CommentValue DiffHunkHeader DiffMetaLine DiffAddedLine DiffRemovedLine DiffContextLine Program Preamble MessageLine CommentLine DiffZone DiffBlock",
-  maxTerm: 29,
-  skippedNodes: [0,13,15,16],
-  repeatNodeCount: 3,
-  tokenData: "^~RPYZU~ZPm~YZU",
+  states: "%QOVQVOOOhQVO'#CpOOQU'#Cq'#CqO!PQTO'#CqOOQU'#Cu'#CuO!_QVO'#CoQ!pQROOOOQU,59[,59[O!uQVO,59[OOQU,59],59]O#ZQTO,59]OOQU-E6s-E6sO#`QZO'#CsOOQQ'#Cv'#CvO#qQRO'#CrQOQPOOOOQU1G.v1G.vO#yQTO1G.wOOQY'#Cw'#CwO$OQZO,59_O$aQZO'#CtOOQY'#Cx'#CxO$uQZO,59_OOQQ-E6t-E6tOOQU7+$c7+$cOOQY-E6u-E6uO%QQZO1G.yOOQY'#Cy'#CyO%]QZO,59`OOQY-E6v-E6vOOQY-E6w-E6w",
+  stateData: "%q~OpOS~OQPOTQOUROPcPncP~ORWOSVOPdXQdXTdXUdXndX~OVXOWXOXXOYYO~OQPOTQOUROPcXncX~OP[O~OS`OPdaQdaTdaUdanda~OZaO~O]dO^bOabOPgXngX~OP[OnfX~O[hO~O]dO^bOabOPganga~O_kO`kOakOPhX]hXnhX~O]dOPganga~O]dOPgingi~O_kO`kOakOPha]hanha~O",
+  goto: "!wnPPPPPPPPPPPPPPPPPPPorrvy}!T!Z!a!g!qRUOTSOTR_UT]U^Xe[cfjQTORZTQ^URg^Qc[RicQf[QjcTmfjQldRnl",
+  nodeNames: "⚠ DiffGitLine MessageNormal MessageWarn MessageIllegal CommentWhole CommentMarker StatusChanged StatusInserted StatusDeleted FileType CommentColon CommentValue DiffHunkHeader DiffMetaLine DiffAddedLine DiffRemovedLine DiffContextLine Program Preamble MessageLine CommentLine DiffZone DiffBlock Hunk",
+  maxTerm: 32,
+  skippedNodes: [0],
+  repeatNodeCount: 5,
+  tokenData: "^~RPYZU~ZPp~YZU",
   tokenizers: [0, diffGitLineTokenizer, preambleTokenizer, diffContentTokenizer],
   topRules: {"Program":[0,18]},
   tokenPrec: 0

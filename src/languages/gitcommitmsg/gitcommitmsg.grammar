@@ -11,7 +11,7 @@ CommentLine {
 
 DiffZone { DiffBlock+ }
 
-DiffBlock { DiffGitLine (DiffMetaLine | DiffContextLine)* }
+DiffBlock { DiffGitLine (DiffMetaLine | DiffContextLine)* Hunk* }
 
 Hunk { DiffHunkHeader (DiffAddedLine | DiffRemovedLine | DiffContextLine)* }
 

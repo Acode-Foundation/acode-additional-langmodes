@@ -22,4 +22,5 @@ export const
   MessageLine = 20,
   CommentLine = 21,
   DiffZone = 22,
-  DiffBlock = 23
+  DiffBlock = 23,
+  Hunk = 24

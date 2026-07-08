@@ -19,7 +19,7 @@ import {
   DiffContextLine,
 } from "./parser.terms.js";
 
-const COMMIT_LINE_WARM_LENGTH = 30;
+const COMMIT_LINE_WARM_LENGTH = 50;
 const COMMIT_LINE_MAX_LENGTH = 72;
 
 const HASH = 35; // '#'
