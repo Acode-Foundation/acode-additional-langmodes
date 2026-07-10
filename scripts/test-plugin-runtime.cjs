@@ -70,6 +70,7 @@ async function test() {
 		"ejs",
 		"gitattributes",
 		"gleam",
+		"gitcommitmsg"
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
@@ -79,6 +80,7 @@ async function test() {
 	assert(modes.get("zig").extensions.includes("zon"));
 	assert(modes.get("gitignore").extensions.includes("gitignore"));
 	assert(modes.get("jsonc").extensions.includes("jsonc"));
+	assert(modes.get('gitcommitmsg').extensions.includes("^COMMIT_EDITMSG"));
 
 	const samples = {
 		asciidoc: `= Project Notes
@@ -128,6 +130,40 @@ message:
 		ejs: "<% if (user) { %>\n<h2><%= user.name %></h2>\n<% } %>",
 		gitattributes: "# comment\n*.txt text eol=lf\n",
 		gleam: "pub fn main() { Nil }\n",
+		gitcommitmsg: `
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is up to date with 'origin/main'.
+#
+# Changes to be committed:
+#	modified:   src/components/AuthProvider.tsx
+#	new file:   src/index.html
+#	modified:   src/lib/data.ts
+#	modified:   src/lib/utils.ts
+#
+# Changes not staged for commit:
+#	modified:   package.json
+#	modified:   src/hooks/use-toast.ts
+#	modified:   src/index.html
+#
+# ------------------------ >8 ------------------------
+# Do not modify or remove the line above.
+# Everything below it will be ignored.
+diff --git a/src/components/AuthProvider.tsx b/src/components/AuthProvider.tsx
+index 395e257..c594478 100644
+--- a/src/components/AuthProvider.tsx
++++ b/src/components/AuthProvider.tsx
+@@ -9,3 +9,5 @@ interface AuthProviderProps {
+ export default function AuthProvider({ children }: AuthProviderProps) {
+     return <SessionProvider>{children}</SessionProvider>
+ }
++
++
+diff --git a/src/index.html b/src/index.html
+new file mode 100644
+index 0000000..e69de29`
 	};
 
 	for (const [name, source] of Object.entries(samples)) {
