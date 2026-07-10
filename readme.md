@@ -10,6 +10,7 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - Zig (`.zig`, `.zon`)
 - Git ignore (`.gitignore`, `.ignore`, Git exclude-style files)
 - Git attributes (`.gitattributes`, Git attributes-style files)
+- Git Commit Message (`^COMMIT_EDITMSG`, `^commit_editmsg`)
 - JSONC (`.jsonc`)
 - BibTeX (`.bib`)
 - Elixir (`.ex`, `.exs`, `.eex`, `.heex`, `.leex`)

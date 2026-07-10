@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- Added git commit message mode (`^COMMIT_EDITMSG`, `^commit_editmsg`)
+
 ## 1.1.2
 
 - Added gleam language support
