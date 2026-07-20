@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.4
+
+- Added an enhanced YAML/YML mode with structural parsing, richer scalar highlighting, indentation, and folding.
+
 ## 1.1.3
 
 - Added git commit message mode (`^COMMIT_EDITMSG`, `^commit_editmsg`)
