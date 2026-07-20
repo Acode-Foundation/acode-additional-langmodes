@@ -5,6 +5,7 @@ import { communityLanguageModes } from "./community";
 import { gitignoreMode } from "./gitignore";
 import { zigMode } from "./zig";
 import { jsoncMode } from "./jsonc";
+import { yamlMode } from "./yaml";
 
 import { ejsMode } from "./ejs"
 import { gitattributesMode } from "./gitattributes";
@@ -23,6 +24,7 @@ export const languageModes = [
 	zigMode,
 	gitignoreMode,
 	jsoncMode,
+	yamlMode,
 	...communityLanguageModes,
   ejsMode,
   gitattributesMode,

@@ -179,6 +179,129 @@ for (const sample of jsoncSamples) {
 
 console.log(`Validated ${jsoncSamples.length} JSONC parser fixtures.`);
 
+const yamlBehaviorBundle = path.join(os.tmpdir(), "acode-yaml-behavior-test-bundle.mjs");
+const yamlBehaviorSource = String.raw`
+import assert from "node:assert/strict";
+import { EditorState } from "@codemirror/state";
+import { foldable, getIndentation, indentUnit, syntaxTree } from "@codemirror/language";
+import { classHighlighter, highlightTree } from "@lezer/highlight";
+import { yaml, yamlLanguage } from "./src/languages/yaml/index.js";
+
+const source = [
+  "%YAML 1.2",
+  "---",
+  "defaults: &defaults",
+  "  enabled: true",
+  "  retries: 3",
+  "  ratio: -1.25e+2",
+  "  missing: null",
+  "  image: ghcr.io/acme/app:latest",
+  "jobs:",
+  "  build:",
+  "    <<: *defaults",
+  "    runs-on: ubuntu-latest # runner label",
+  "    strategy: {matrix: {node: [18, 20]}}",
+  "    steps:",
+  "      - name: Test",
+  "        run: |-",
+  "          npm test # block scalar content",
+  "tagged: !!str value",
+  "...",
+  "",
+].join("\n");
+
+const tree = yamlLanguage.parser.parse(source);
+const names = new Set();
+const errors = [];
+tree.iterate({
+  enter(node) {
+    names.add(node.name);
+    if (node.type.isError) errors.push([node.from, node.to]);
+  },
+});
+
+assert.equal(errors.length, 0, "YAML fixture produced parse errors");
+for (const name of [
+  "Directive",
+  "BlockMapping",
+  "BlockSequence",
+  "FlowMapping",
+  "FlowSequence",
+  "BlockLiteral",
+  "Anchor",
+  "Alias",
+  "Tag",
+  "Boolean",
+  "Integer",
+  "Float",
+  "Null",
+  "PlainString",
+]) {
+  assert(names.has(name), "YAML fixture did not produce " + name);
+}
+
+const spans = [];
+highlightTree(tree, classHighlighter, (from, to, cls) => {
+  spans.push({ text: source.slice(from, to), cls });
+});
+
+function isHighlighted(text, tokenClass) {
+  return spans.some((span) => span.text === text && span.cls.includes(tokenClass));
+}
+
+assert(isHighlighted("defaults", "tok-propertyName"));
+assert(isHighlighted("true", "tok-bool"));
+assert(isHighlighted("3", "tok-number"));
+assert(isHighlighted("-1.25e+2", "tok-number"));
+assert(isHighlighted("null", "tok-keyword"));
+assert(isHighlighted("ubuntu-latest", "tok-string"));
+assert(isHighlighted("&defaults", "tok-labelName"));
+assert(isHighlighted("*defaults", "tok-labelName"));
+assert(isHighlighted("!!str", "tok-typeName"));
+assert(isHighlighted("# runner label", "tok-comment"));
+assert(!isHighlighted("# block scalar content", "tok-comment"));
+
+const indentSource = "jobs:\n  build:\n    steps:\n      - name: Test\n        run: npm test\n";
+const indentState = EditorState.create({
+  doc: indentSource,
+  extensions: [yaml(), indentUnit.of("  ")],
+});
+syntaxTree(indentState);
+assert.equal(getIndentation(indentState, indentState.doc.line(4).from), 4);
+assert.equal(getIndentation(indentState, indentState.doc.line(5).from), 8);
+assert(foldable(indentState, indentState.doc.line(1).from, indentState.doc.line(1).to));
+
+const flowSource = "matrix: {\n  node: [18, 20]\n}\n";
+const flowState = EditorState.create({
+  doc: flowSource,
+  extensions: [yaml(), indentUnit.of("  ")],
+});
+syntaxTree(flowState);
+assert.equal(getIndentation(flowState, flowState.doc.line(3).from), 0);
+
+console.log("Validated YAML parsing, highlighting, indentation, and folding fixtures.");
+`;
+
+await build({
+	stdin: {
+		contents: yamlBehaviorSource,
+		resolveDir: process.cwd(),
+		sourcefile: "yaml-behavior-test.mjs",
+		loader: "js",
+	},
+	bundle: true,
+	format: "esm",
+	platform: "node",
+	outfile: yamlBehaviorBundle,
+	logLevel: "silent",
+});
+
+try {
+	await import(pathToFileURL(yamlBehaviorBundle).href + `?t=${Date.now()}`);
+} finally {
+	fs.rmSync(yamlBehaviorBundle, { force: true });
+}
+
 const { parser: ejsParser } = await bundledRequire(
 	"src/languages/ejs/parser.js",
 	"acode-ejs-parser-test.cjs",
@@ -487,4 +610,3 @@ for (const sample of gleamSamples) {
 }
 
 console.log(`Validated ${gleamSamples.length} Gleam parser fixtures.`);
-

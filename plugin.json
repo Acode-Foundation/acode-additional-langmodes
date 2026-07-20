@@ -17,7 +17,8 @@
         "autohotkey",
         "zig",
         "svelte",
-        "jsonc"
+        "jsonc",
+        "yaml"
     ],
     "price": 0,
     "permissions": [],

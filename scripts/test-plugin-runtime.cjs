@@ -19,8 +19,8 @@ const registered = [];
 const unregistered = [];
 
 const editorLanguages = {
-	get() {
-		return null;
+	get(name) {
+		return name === "yaml" ? { name: "yaml" } : null;
 	},
 	register(name, extensions, caption, load) {
 		registered.push({ name, extensions, caption, load });
@@ -56,6 +56,7 @@ async function test() {
 		"zig",
 		"gitignore",
 		"jsonc",
+		"yaml-enhanced",
 		"bibtex",
 		"elixir",
 		"golfscript",
@@ -80,6 +81,8 @@ async function test() {
 	assert(modes.get("zig").extensions.includes("zon"));
 	assert(modes.get("gitignore").extensions.includes("gitignore"));
 	assert(modes.get("jsonc").extensions.includes("jsonc"));
+	assert(modes.get("yaml-enhanced").extensions.includes("yaml"));
+	assert(modes.get("yaml-enhanced").extensions.includes("yml"));
 	assert(modes.get('gitcommitmsg').extensions.includes("^COMMIT_EDITMSG"));
 
 	const samples = {
@@ -116,6 +119,15 @@ message:
 		zig: 'const std = @import("std");',
 		gitignore: "# build output\ndist/\n!important.log\n*.tmp\n",
 		jsonc: '{\n  // comment\n  "foo": "bar",\n}',
+		"yaml-enhanced": `defaults: &defaults
+  enabled: true
+  retries: 3
+jobs:
+  build:
+    <<: *defaults
+    runs-on: ubuntu-latest
+    matrix: {node: [18, 20]}
+`,
 		bibtex: "@article{example, title={Example}}",
 		elixir: "defmodule Example do\nend",
 		golfscript: "1 2 +",
@@ -182,7 +194,7 @@ index 0000000..e69de29`
 		});
 		const tree = support.language.parser.parse(source);
 		assert.equal(tree.length, source.length, `${name} did not parse the full fixture`);
-		if (name === "asciidoc" || name === "assembly") {
+		if (name === "asciidoc" || name === "assembly" || name === "yaml-enhanced") {
 			const nodeNames = new Set();
 			const errors = [];
 			tree.iterate({
@@ -195,7 +207,9 @@ index 0000000..e69de29`
 			const expectedNodes =
 				name === "asciidoc"
 					? ["Heading1", "Heading2", "AttributeLine", "Xref", "ListingBlock", "ListItem"]
-					: ["DirectiveName", "Label", "Instruction", "Register", "String"];
+					: name === "assembly"
+						? ["DirectiveName", "Label", "Instruction", "Register", "String"]
+						: ["BlockMapping", "FlowMapping", "FlowSequence", "Anchor", "Alias", "Boolean", "Integer"];
 			for (const nodeName of expectedNodes) {
 				assert(
 					nodeNames.has(nodeName),

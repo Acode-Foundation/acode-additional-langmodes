@@ -12,6 +12,7 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - Git attributes (`.gitattributes`, Git attributes-style files)
 - Git Commit Message (`^COMMIT_EDITMSG`, `^commit_editmsg`)
 - JSONC (`.jsonc`)
+- YAML Enhanced (`.yaml`, `.yml`), with structural parsing and core-schema scalar highlighting
 - BibTeX (`.bib`)
 - Elixir (`.ex`, `.exs`, `.eex`, `.heex`, `.leex`)
 - EJS (`.ejs`)

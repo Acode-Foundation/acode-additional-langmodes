@@ -16,6 +16,7 @@
     "@lezer/common": "^1.5.2",
     "@lezer/highlight": "^1.2.3",
     "@lezer/lr": "^1.4.10",
+    "@lezer/yaml": "^1.0.4",
     "@replit/codemirror-lang-svelte": "^6.0.0",
     "@viz-js/lang-dot": "^1.0.5",
     "acode-plugin-types": "^1.11.7-patch.2",

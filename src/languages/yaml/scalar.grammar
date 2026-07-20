@@ -1,0 +1,41 @@
+@top Scalar { Null | Boolean | Float | Integer | PlainString }
+
+@tokens {
+  Null {
+    "~" |
+    "null" | "Null" | "NULL"
+  }
+
+  Boolean {
+    "true" | "True" | "TRUE" |
+    "false" | "False" | "FALSE"
+  }
+
+  Float {
+    ("+" | "-")? (
+      ".inf" | ".Inf" | ".INF" |
+      ".nan" | ".NaN" | ".NAN" |
+      decimalDigits "." decimalDigits? exponent? |
+      decimalDigits exponent
+    )
+  }
+
+  Integer {
+    ("+" | "-")? (
+      "0b" binaryDigits |
+      "0o" octalDigits |
+      "0x" hexDigits |
+      decimalDigits
+    )
+  }
+
+  PlainString { ![]+ }
+
+  binaryDigits { $[01] ($[01_] * $[01])? }
+  octalDigits { $[0-7] ($[0-7_] * $[0-7])? }
+  decimalDigits { $[0-9] ($[0-9_] * $[0-9])? }
+  hexDigits { $[0-9a-fA-F] ($[0-9a-fA-F_] * $[0-9a-fA-F])? }
+  exponent { $[eE] ("+" | "-")? decimalDigits }
+
+  @precedence { Null, Boolean, Float, Integer, PlainString }
+}
