@@ -11,6 +11,7 @@ import { ejsMode } from "./ejs"
 import { gitattributesMode } from "./gitattributes";
 import { gleamMode } from "./gleam";
 import { gitCommitMsgMode } from "./gitcommitmsg";
+import { makefileMode } from "./makefile";
 
 /**
  * Add future language descriptors here. Each descriptor owns its metadata and
@@ -29,5 +30,6 @@ export const languageModes = [
   ejsMode,
   gitattributesMode,
   gleamMode,
-	gitCommitMsgMode
+	gitCommitMsgMode,
+	makefileMode,
 ];

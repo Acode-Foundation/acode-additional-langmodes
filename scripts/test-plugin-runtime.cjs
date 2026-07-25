@@ -71,7 +71,8 @@ async function test() {
 		"ejs",
 		"gitattributes",
 		"gleam",
-		"gitcommitmsg"
+		"gitcommitmsg",
+		"makefile",
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
@@ -84,6 +85,8 @@ async function test() {
 	assert(modes.get("yaml-enhanced").extensions.includes("yaml"));
 	assert(modes.get("yaml-enhanced").extensions.includes("yml"));
 	assert(modes.get('gitcommitmsg').extensions.includes("^COMMIT_EDITMSG"));
+	assert(modes.get("makefile").extensions.includes("mk"));
+	assert(modes.get("makefile").extensions.includes("Makefile"));
 
 	const samples = {
 		asciidoc: `= Project Notes
@@ -175,7 +178,15 @@ index 395e257..c594478 100644
 +
 diff --git a/src/index.html b/src/index.html
 new file mode 100644
-index 0000000..e69de29`
+index 0000000..e69de29`,
+		makefile: `CC := gcc
+.PHONY: all
+all: main.o
+	$(CC) -o app $@
+ifeq ($(DEBUG),1)
+  CFLAGS += -g
+endif
+`,
 	};
 
 	for (const [name, source] of Object.entries(samples)) {
@@ -194,7 +205,12 @@ index 0000000..e69de29`
 		});
 		const tree = support.language.parser.parse(source);
 		assert.equal(tree.length, source.length, `${name} did not parse the full fixture`);
-		if (name === "asciidoc" || name === "assembly" || name === "yaml-enhanced") {
+		if (
+			name === "asciidoc" ||
+			name === "assembly" ||
+			name === "yaml-enhanced" ||
+			name === "makefile"
+		) {
 			const nodeNames = new Set();
 			const errors = [];
 			tree.iterate({
@@ -209,7 +225,16 @@ index 0000000..e69de29`
 					? ["Heading1", "Heading2", "AttributeLine", "Xref", "ListingBlock", "ListItem"]
 					: name === "assembly"
 						? ["DirectiveName", "Label", "Instruction", "Register", "String"]
-						: ["BlockMapping", "FlowMapping", "FlowSequence", "Anchor", "Alias", "Boolean", "Integer"];
+						: name === "makefile"
+							? [
+									"VariableAssignment",
+									"SpecialTarget",
+									"TargetLine",
+									"RecipeLine",
+									"Conditional",
+									"AutomaticVariable",
+								]
+							: ["BlockMapping", "FlowMapping", "FlowSequence", "Anchor", "Alias", "Boolean", "Integer"];
 			for (const nodeName of expectedNodes) {
 				assert(
 					nodeNames.has(nodeName),

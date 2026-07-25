@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.5
+
+- Added a Makefile mode 
+
 ## v1.1.4
 
 - Added an enhanced YAML/YML mode with structural parsing, richer scalar highlighting, indentation, and folding.
