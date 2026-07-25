@@ -30,22 +30,29 @@ const editorLanguages = {
 	},
 };
 
-global.acode = {
-	require(id) {
-		return id === "editorLanguages" ? editorLanguages : runtimeModules[id];
-	},
-	setPluginInit(_id, init) {
-		initPlugin = init;
-	},
-	setPluginUnmount(_id, unmount) {
-		unmountPlugin = unmount;
-	},
-};
-global.window = { acode: global.acode };
+function installAcodeMock(requireImpl) {
+	global.acode = {
+		require: requireImpl,
+		setPluginInit(_id, init) {
+			initPlugin = init;
+		},
+		setPluginUnmount(_id, unmount) {
+			unmountPlugin = unmount;
+		},
+	};
+	global.window = { acode: global.acode };
+}
+
+// Default: host exposes full CodeMirror / Lezer runtimes (modern Acode).
+installAcodeMock((id) =>
+	id === "editorLanguages" ? editorLanguages : runtimeModules[id],
+);
 
 require("../dist/main.js");
 
-async function test() {
+async function testHostRuntime() {
+	registered.length = 0;
+	unregistered.length = 0;
 	await initPlugin("file:///plugin/", null, {});
 
 	const modes = new Map(registered.map((mode) => [mode.name, mode]));
@@ -295,8 +302,75 @@ endif
 	assert.deepEqual(unregistered, [...expectedNames].reverse());
 
 	console.log(
-		`Validated ${expectedNames.length} Acode registrations and language loaders.`,
+		`Validated ${expectedNames.length} Acode registrations and language loaders (host @lezer/*).`,
 	);
+}
+
+/**
+ * Older Acode builds do not expose @lezer/lr or @lezer/common via
+ * acode.require. The plugin must fall back to its bundled copies so modes
+ * that need LRParser / ExternalTokenizer / ContextTracker / parseMixed still load.
+ */
+async function testBundledLezerFallback() {
+	const distPath = require.resolve("../dist/main.js");
+	delete require.cache[distPath];
+	registered.length = 0;
+	unregistered.length = 0;
+
+	installAcodeMock((id) => {
+		if (id === "editorLanguages") return editorLanguages;
+		// Simulate pre-@lezer/* host: these requires return undefined.
+		if (id === "@lezer/lr" || id === "@lezer/common") return undefined;
+		return runtimeModules[id];
+	});
+
+	require(distPath);
+	await initPlugin("file:///plugin/", null, {});
+
+	const modes = new Map(registered.map((mode) => [mode.name, mode]));
+	assert(modes.has("makefile"), "makefile should register without host @lezer/lr");
+	assert(
+		modes.has("yaml-enhanced"),
+		"yaml-enhanced should register without host @lezer/common",
+	);
+
+	const makefileSource = `CC := gcc
+.PHONY: all
+all: main.o
+	$(CC) -o app $@
+ifeq ($(DEBUG),1)
+  CFLAGS += -g
+endif
+`;
+	const makefileSupport = modes.get("makefile").load();
+	const makefileTree = makefileSupport.language.parser.parse(makefileSource);
+	assert.equal(
+		makefileTree.length,
+		makefileSource.length,
+		"makefile should parse with bundled @lezer/lr",
+	);
+
+	const yamlSource = `jobs:
+  build:
+    runs-on: ubuntu-latest
+`;
+	const yamlSupport = modes.get("yaml-enhanced").load();
+	const yamlTree = yamlSupport.language.parser.parse(yamlSource);
+	assert.equal(
+		yamlTree.length,
+		yamlSource.length,
+		"yaml-enhanced should parse with bundled @lezer/lr + @lezer/common",
+	);
+
+	await unmountPlugin();
+	console.log(
+		"Validated bundled @lezer/lr and @lezer/common fallback for older Acode.",
+	);
+}
+
+async function test() {
+	await testHostRuntime();
+	await testBundledLezerFallback();
 }
 
 test().catch((error) => {
