@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.6
+
+- Prefer Acode's shared @lezer/lr when available, falling back to a bundled copy for older Acode versions.
+
 ## v1.1.5
 
 - Added a Makefile mode 
