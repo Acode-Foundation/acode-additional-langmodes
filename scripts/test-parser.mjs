@@ -610,3 +610,286 @@ for (const sample of gleamSamples) {
 }
 
 console.log(`Validated ${gleamSamples.length} Gleam parser fixtures.`);
+
+// Test Makefile Parser
+const { parser: makefileParser } = await bundledRequire(
+	"src/languages/makefile/parser.js",
+	"acode-makefile-parser-test.cjs",
+);
+
+const makefileSamples = [
+	{
+		name: "rules, assignments, recipes, special targets",
+		source: `CC := gcc
+CFLAGS = -Wall
+
+.PHONY: all clean
+
+all: main.o
+	$(CC) $(CFLAGS) -o app main.o
+
+clean:
+	rm -f app main.o
+`,
+		nodes: [
+			"VariableAssignment",
+			"TargetLine",
+			"RecipeLine",
+			"SpecialTarget",
+			"NamedVarRef",
+			"AssignOp",
+			"RecipeStart",
+		],
+	},
+	{
+		name: "conditionals, define, else ifeq",
+		source: `ifeq ($(DEBUG),1)
+  CFLAGS += -g
+else ifeq ($(DEBUG),2)
+  CFLAGS += -g -O0
+else
+  CFLAGS += -O2
+endif
+
+define greet
+echo hello
+endef
+`,
+		nodes: [
+			"Conditional",
+			"EqConditional",
+			"ElsifClause",
+			"ElseClause",
+			"DefineDirective",
+			"IfeqKw",
+			"EndifKw",
+			"DefineKw",
+			"EndefKw",
+		],
+	},
+	{
+		name: "includes, functions, automatic vars, vpath",
+		source: `include config.mk
+-include local.mk
+vpath %.h include
+
+SOURCES := $(wildcard src/*.c)
+OBJS := $(patsubst %.c,%.o,$(SOURCES))
+export PATH
+override CFLAGS += -std=c11
+
+%.o: %.c
+	$(CC) -c -o $@ $<
+
+$(info Building $(words $(OBJS)) objects)
+`,
+		nodes: [
+			"IncludeDirective",
+			"IncludeKw",
+			"VpathDirective",
+			"FunctionCall",
+			"FunctionName",
+			"FunctionStatement",
+			"PatternWildcard",
+			"ExportDirective",
+			"OverrideDirective",
+			"AutomaticVariable",
+		],
+	},
+	{
+		name: "static pattern rule and line continue",
+		source: `# build objects
+objects = foo.o \\
+  bar.o
+$(objects): %.o: %.c
+	$(CC) -c $(CFLAGS) $< -o $@
+`,
+		nodes: [
+			"Comment",
+			"LineContinue",
+			"TargetLine",
+			"PatternWildcard",
+			"RecipeLine",
+			"AutomaticVariable",
+		],
+	},
+	{
+		name: "order-only auto vars, gnu make 4.4 functions, combined directives",
+		source: `.DEFAULT_GOAL := help
+export override CFLAGS += -Wall
+override define GREET
+  @echo Hello
+endef
+private define LOG
+  @echo Log
+endef
+prog: override CFLAGS += -g
+
+app: main.o | lib.a
+	$(CC) -o $@ $< $| $(|D) $(let x,1,$(x)) $(intcmp 1,2,lt,eq,gt)
+`,
+		nodes: [
+			"VariableAssignment",
+			"ExportDirective",
+			"OverrideDirective",
+			"PrivateDirective",
+			"DefineDirective",
+			"TargetLine",
+			"OrderOnlySep",
+			"AutomaticVariable",
+			"FunctionCall",
+			"FunctionName",
+		],
+	},
+	{
+		name: "non-start directive words stay plain identifiers",
+		source: `vpath %.h include
+FOO else ifeq: bar
+`,
+		nodes: [
+			"VpathDirective",
+			"TargetLine",
+		],
+	},
+];
+
+for (const sample of makefileSamples) {
+	const tree = makefileParser.parse(sample.source);
+	const names = new Set();
+	const errors = [];
+
+	tree.iterate({
+		enter(node) {
+			names.add(node.name);
+			if (node.type.isError) {
+				errors.push([node.from, node.to, sample.source.slice(node.from, node.to)]);
+			}
+		},
+	});
+
+	assert.equal(
+		errors.length,
+		0,
+		`${sample.name} produced parse errors: ${JSON.stringify(errors)}`,
+	);
+	assert.equal(
+		tree.length,
+		sample.source.length,
+		`${sample.name} was not fully parsed`,
+	);
+	for (const node of sample.nodes) {
+		assert(names.has(node), `${sample.name} did not produce ${node}`);
+	}
+}
+
+console.log(`Validated ${makefileSamples.length} Makefile parser fixtures.`);
+
+const makefileBehaviorBundle = path.join(
+	os.tmpdir(),
+	"acode-makefile-behavior-test-bundle.mjs",
+);
+const makefileBehaviorSource = String.raw`
+import assert from "node:assert/strict";
+import { EditorState } from "@codemirror/state";
+import { foldable, getIndentation, indentUnit, syntaxTree } from "@codemirror/language";
+import { classHighlighter, highlightTree } from "@lezer/highlight";
+import { makefile, makefileLanguage } from "./src/languages/makefile/index.js";
+
+const source = [
+  "# Makefile fixture",
+  "include config.mk",
+  "CC := gcc",
+  ".PHONY: all",
+  "all: main.o",
+  "\t$(CC) -o app $@",
+  "ifeq ($(DEBUG),1)",
+  "  CFLAGS += -g",
+  "endif",
+  "$(info hello)",
+  "",
+].join("\n");
+
+const tree = makefileLanguage.parser.parse(source);
+const names = new Set();
+const errors = [];
+tree.iterate({
+  enter(node) {
+    names.add(node.name);
+    if (node.type.isError) errors.push([node.from, node.to]);
+  },
+});
+assert.equal(errors.length, 0, "Makefile fixture produced parse errors");
+for (const name of [
+  "Comment",
+  "IncludeDirective",
+  "IncludeKw",
+  "VariableAssignment",
+  "SpecialTarget",
+  "TargetLine",
+  "RecipeLine",
+  "Conditional",
+  "FunctionStatement",
+  "FunctionName",
+  "AutomaticVariable",
+]) {
+  assert(names.has(name), "Makefile fixture did not produce " + name);
+}
+
+const spans = [];
+highlightTree(tree, classHighlighter, (from, to, cls) => {
+  spans.push({ text: source.slice(from, to), cls });
+});
+
+function isHighlighted(text, tokenClass) {
+  return spans.some((span) => span.text === text && span.cls.includes(tokenClass));
+}
+
+assert(spans.some((span) => span.cls.includes("tok-comment") && span.text.includes("Makefile fixture")));
+assert(isHighlighted("include", "tok-keyword"));
+assert(isHighlighted("ifeq", "tok-keyword"));
+assert(isHighlighted("endif", "tok-keyword"));
+assert(isHighlighted(":=", "tok-operator"));
+assert(isHighlighted("$@", "tok-variableName"));
+assert(isHighlighted("\t", "tok-meta"));
+
+const indentSource = "ifeq (a,b)\nCFLAGS = 1\nelse\nCFLAGS = 0\nendif\n";
+const indentState = EditorState.create({
+  doc: indentSource,
+  extensions: [makefile(), indentUnit.of("  ")],
+});
+syntaxTree(indentState);
+assert.equal(getIndentation(indentState, indentState.doc.line(2).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(4).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(5).from), 0);
+assert(foldable(indentState, indentState.doc.line(1).from, indentState.doc.line(1).to));
+
+const defineSource = "define greet\necho hi\nendef\n";
+const defineState = EditorState.create({
+  doc: defineSource,
+  extensions: [makefile()],
+});
+syntaxTree(defineState);
+assert(foldable(defineState, defineState.doc.line(1).from, defineState.doc.line(1).to));
+
+console.log("Validated Makefile parsing, highlighting, indentation, and folding fixtures.");
+`;
+
+await build({
+	stdin: {
+		contents: makefileBehaviorSource,
+		resolveDir: process.cwd(),
+		sourcefile: "makefile-behavior-test.mjs",
+		loader: "js",
+	},
+	bundle: true,
+	format: "esm",
+	platform: "node",
+	outfile: makefileBehaviorBundle,
+	logLevel: "silent",
+});
+
+try {
+	await import(pathToFileURL(makefileBehaviorBundle).href + `?t=${Date.now()}`);
+} finally {
+	fs.rmSync(makefileBehaviorBundle, { force: true });
+}

@@ -1,0 +1,452 @@
+// Makefile grammar for CodeMirror / Lezer
+//
+// Structure adapted from tree-sitter-make:
+//   https://github.com/alemuller/tree-sitter-make/blob/main/grammar.js
+
+@top Makefile { statement* }
+
+// Recipes are top-level statements so they compose cleanly inside
+// conditionals (tree-sitter-make _conditional_consequence) without
+// shift/reduce against rule bodies.
+statement {
+  BlankLine |
+  Comment |
+  Conditional |
+  DefineDirective |
+  IncludeDirective |
+  VpathDirective |
+  ExportDirective |
+  UnexportDirective |
+  UndefineDirective |
+  OverrideDirective |
+  PrivateDirective |
+  VariableAssignment |
+  TargetLine |
+  RecipeLine |
+  FunctionStatement
+}
+
+BlankLine { newline }
+
+// Bare function call as a statement: $(info ...), $(error ...), etc.
+FunctionStatement {
+  FunctionCall CommentInline? (newline | eof)
+}
+
+// ── Comments ──────────────────────────────────────────────────────────
+Comment { CommentLine (newline | eof) }
+CommentInline { CommentLine }
+
+// ── Target / prerequisite lines ───────────────────────────────────────
+// Ordinary: targets: prereqs
+// Static pattern: targets: target-pattern: prereq-pattern  (tree-sitter 4.12.1)
+TargetLine {
+  TargetPart+ ColonSep PrereqPart* (ColonSep PrereqPart*)? CommentInline? (newline | eof)
+}
+
+TargetPart {
+  Name |
+  VariableExpansion |
+  PatternWildcard |
+  QuotedString |
+  LineContinue |
+  Word
+}
+
+PrereqPart {
+  Name |
+  VariableExpansion |
+  PatternWildcard |
+  QuotedString |
+  OrderOnlySep |
+  LineContinue |
+  PathChar |
+  Word
+}
+
+// Recipe line: tab + optional @/+/- flags + body
+RecipeLine {
+  RecipeStart RecipePart* CommentInline? (newline | eof)
+}
+
+RecipePart {
+  RecipeText |
+  VariableExpansion |
+  Escape |
+  QuotedString |
+  LineContinue |
+  Name |
+  Word |
+  PathChar
+}
+
+// ── Variable assignments ──────────────────────────────────────────────
+VariableAssignment {
+  TargetPart+ ColonSep ( OverrideKw | ExportKw | PrivateKw )? BareVariableAssignment |
+  BareVariableAssignment
+}
+
+BareVariableAssignment {
+  Name AssignOp ValuePart* CommentInline? (newline | eof)
+}
+
+ValuePart {
+  ValueText |
+  VariableExpansion |
+  Escape |
+  QuotedString |
+  PatternWildcard |
+  LineContinue |
+  PathChar |
+  Name |
+  Word
+}
+
+// ── define / endef ────────────────────────────────────────────────────
+DefineDirective {
+  DefineKw Name AssignOp? CommentInline? newline
+  DefineBodyLine*
+  EndefKw CommentInline? (newline | eof)
+}
+
+DefineKw { defineKw }
+EndefKw { endefKw }
+
+DefineBodyLine {
+  RecipeLine |
+  Comment |
+  BlankLine |
+  DefineTextLine
+}
+
+DefineTextLine {
+  ValuePart+ CommentInline? newline
+}
+
+// ── Directives ────────────────────────────────────────────────────────
+// Named wrappers so keywords appear as highlightable nodes (raw external
+// terminals alone are easy to miss in styleTags / tree printers).
+IncludeDirective {
+  IncludeKw IncludePart* CommentInline? (newline | eof)
+}
+
+IncludeKw { includeKw | sincludeKw }
+
+IncludePart {
+  Name |
+  VariableExpansion |
+  PatternWildcard |
+  QuotedString |
+  PathChar |
+  LineContinue |
+  Word
+}
+
+VpathDirective {
+  VpathKw VpathPart* CommentInline? (newline | eof)
+}
+
+VpathKw { vpathKw }
+
+VpathPart {
+  Name |
+  VariableExpansion |
+  PatternWildcard |
+  PathChar |
+  LineContinue |
+  Word
+}
+
+ExportDirective {
+  ExportKw (
+    DefineDirective |
+    ( OverrideKw | PrivateKw )? BareVariableAssignment |
+    ExportName* CommentInline? (newline | eof)
+  )
+}
+
+ExportKw { exportKw }
+
+ExportName {
+  Name | VariableExpansion
+}
+
+UnexportDirective {
+  UnexportKw ExportName* CommentInline? (newline | eof)
+}
+
+UnexportKw { unexportKw }
+
+UndefineDirective {
+  UndefineKw Name CommentInline? (newline | eof)
+}
+
+UndefineKw { undefineKw }
+
+OverrideDirective {
+  OverrideKw (
+    DefineDirective |
+    ( ExportKw | PrivateKw )? BareVariableAssignment |
+    UndefineKw Name CommentInline? (newline | eof)
+  )
+}
+
+OverrideKw { overrideKw }
+
+PrivateDirective {
+  PrivateKw (
+    DefineDirective |
+    ( OverrideKw | ExportKw )? BareVariableAssignment
+  )
+}
+
+PrivateKw { privateKw }
+
+// ── Conditionals ──────────────────────────────────────────────────────
+Conditional {
+  ConditionalHeader
+  statement*
+  ElsifClause*
+  ElseClause?
+  EndifKw CommentInline? (newline | eof)
+}
+
+ConditionalHeader {
+  EqConditional | DefConditional
+}
+
+EqConditional {
+  (IfeqKw | IfneqKw) ConditionalArgs CommentInline? newline
+}
+
+DefConditional {
+  (IfdefKw | IfndefKw) CondAtom CommentInline? newline
+}
+
+ElsifClause {
+  ElseKw (IfeqKw | IfneqKw) ConditionalArgs CommentInline? newline statement* |
+  ElseKw (IfdefKw | IfndefKw) CondAtom CommentInline? newline statement*
+}
+
+ElseClause {
+  ElseKw CommentInline? newline statement*
+}
+
+IfeqKw { ifeqKw }
+IfneqKw { ifneqKw }
+IfdefKw { ifdefKw }
+IfndefKw { ifndefKw }
+ElseKw { elseKw }
+EndifKw { endifKw }
+
+// tree-sitter: (arg0, arg1) or two atomic primaries
+ConditionalArgs {
+  "(" CondArg? CommaSep CondArg? ")" |
+  CondAtom CondAtom
+}
+
+CondArg {
+  CondAtom+
+}
+
+CondAtom {
+  Name |
+  VariableExpansion |
+  QuotedString |
+  PatternWildcard |
+  ValueText |
+  Word
+}
+
+// ── Names (never directive keywords — those are contextual tokens) ────
+Name {
+  Identifier |
+  FunctionName |
+  BuiltinVariable |
+  SpecialTarget
+}
+
+// ── Expansions ────────────────────────────────────────────────────────
+// Order matters for GLR-free disambiguation:
+// FunctionCall (FunctionName), BuiltinVarRef, AutomaticVariable first;
+// NamedVarRef / SubstitutionRef only take plain Identifier.
+VariableExpansion {
+  FunctionCall |
+  SubstitutionRef |
+  AutomaticVariable |
+  BuiltinVarRef |
+  NamedVarRef |
+  SimpleVariable
+}
+
+NamedVarRef {
+  DollarOpenParen Identifier DollarCloseParen |
+  DollarOpenBrace Identifier DollarCloseBrace
+}
+
+BuiltinVarRef {
+  DollarOpenParen BuiltinVariable DollarCloseParen |
+  DollarOpenBrace BuiltinVariable DollarCloseBrace
+}
+
+SubstitutionRef {
+  DollarOpenParen Identifier ColonSep SubstPart* DollarCloseParen |
+  DollarOpenBrace Identifier ColonSep SubstPart* DollarCloseBrace
+}
+
+SubstPart {
+  ValueText |
+  VariableExpansion |
+  PatternWildcard |
+  AssignOp |
+  Name |
+  Word
+}
+
+FunctionCall {
+  DollarOpenParen FunctionName FuncArgList? DollarCloseParen |
+  DollarOpenBrace FunctionName FuncArgList? DollarCloseBrace
+}
+
+FuncArgList {
+  FuncArg (CommaSep FuncArg)*
+}
+
+FuncArg {
+  FuncArgPart+
+}
+
+FuncArgPart {
+  ValueText |
+  VariableExpansion |
+  Escape |
+  QuotedString |
+  PatternWildcard |
+  PathChar |
+  ColonSep |
+  AssignOp |
+  Name |
+  Word |
+  LineContinue
+}
+
+// Full automatic-variable forms as single tokens so @ % * etc. are not
+// global (which would steal pattern wildcards and shell globs).
+AutomaticVariable {
+  AutoVar |
+  AutoVarParen |
+  AutoVarBrace
+}
+
+// Contextual directive keywords (line-start / after else only).
+// Declared before @tokens so the external tokenizer runs first and can
+// claim "include"/"ifeq"/… at statement start before Identifier matches.
+@external tokens directiveTokens from "./tokens.js" {
+  includeKw,
+  sincludeKw,
+  vpathKw,
+  exportKw,
+  unexportKw,
+  undefineKw,
+  overrideKw,
+  privateKw,
+  defineKw,
+  endefKw,
+  ifeqKw,
+  ifneqKw,
+  ifdefKw,
+  ifndefKw,
+  elseKw,
+  endifKw
+}
+
+@tokens {
+  spaces { " "+ }
+  newline { "\r"? "\n" }
+  eof { @eof }
+
+  CommentLine { "#" ![\n\r]* }
+
+  // Tab + optional silent/ignore/always-exec flags (TextMate recipe prefixes)
+  RecipeStart { "\t" $[@\-+]* }
+
+  AssignOp { "!=" | "::=" | ":=" | "?=" | "+=" | "=" }
+
+  ColonSep { "&:" | "::" | ":" }
+  OrderOnlySep { "|" }
+  CommaSep { "," }
+
+  LineContinue { "\\" "\r"? "\n" }
+
+  SimpleVariable { "$" ![$({ \t\n\r] }
+  DollarOpenParen { "$$(" | "$(" }
+  DollarOpenBrace { "$${" | "${" }
+  DollarCloseParen { ")" }
+  DollarCloseBrace { "}" }
+  Escape { "$$" }
+
+  // $@ $< etc. and $(@D) $(@F) … as atomic tokens
+  AutoVar { "$" $[@%<?^+/*|] }
+  AutoVarParen { "$(" $[@%<?^+/*|] $[DF]? ")" }
+  AutoVarBrace { "${" $[@%<?^+/*|] $[DF]? "}" }
+
+  PatternWildcard { "%" }
+
+  QuotedString {
+    '"' ( "\\" ![\n\r] | !["\\\n\r] )* ('"' | "") |
+    "'" ( "\\" ![\n\r] | !['\\\n\r] )* ("'" | "")
+  }
+
+  Identifier {
+    $[A-Za-z_.] $[A-Za-z0-9_./+\-@]* |
+    $[0-9] $[A-Za-z0-9_./+\-@]+
+  }
+
+  // Paths and flag-like words (-o, -Wall, -std=c11, ./bin, ~/x)
+  PathChar { $[/~] $[A-Za-z0-9_./+\-@~:=]* }
+  Word { $[+\-] $[A-Za-z0-9_./+\-@~:=]* }
+
+  // Free-form value text (= and : allowed; structural tokens win via precedence)
+  ValueText {
+    ( ![$(){}#\n\r\t|,"' \\] | "\\" ![\n\r] )+
+  }
+
+  // Spaces are @skip'd, so RecipeText must not also match them.
+  RecipeText {
+    ( ![$(){}#\n\r\\ ] | "\\" ![\n\r] )+
+  }
+
+  @precedence {
+    LineContinue,
+    RecipeStart,
+    AutoVarParen,
+    AutoVarBrace,
+    AssignOp,
+    AutoVar,
+    SimpleVariable,
+    DollarOpenParen,
+    DollarOpenBrace,
+    Escape,
+    ColonSep,
+    OrderOnlySep,
+    QuotedString,
+    PatternWildcard,
+    Identifier,
+    PathChar,
+    Word,
+    ValueText,
+    RecipeText,
+    CommentLine
+  }
+}
+
+// Functions, builtins, special targets — safe to specialize globally
+@external specialize { Identifier } specializeIdentifier from "./specialize.js" {
+  BuiltinVariable,
+  FunctionName,
+  SpecialTarget
+}
+
+@skip { spaces }
+
+@detectDelim
