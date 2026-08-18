@@ -27,6 +27,7 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - WGSL (`.wgsl`)
 - Gleam (`.gleam`)
 - Makefile (`.mk`, `.mak`, `.make`, `Makefile`, `makefile`, `GNUmakefile`)
+- Solidity (`.sol`)
 
 Community modes are registered only when Acode does not already provide a mode
 with the same name. Languages already covered by Acode's

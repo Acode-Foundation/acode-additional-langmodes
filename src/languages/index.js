@@ -12,6 +12,7 @@ import { gitattributesMode } from "./gitattributes";
 import { gleamMode } from "./gleam";
 import { gitCommitMsgMode } from "./gitcommitmsg";
 import { makefileMode } from "./makefile";
+import { solidityMode } from "./solidity";
 
 /**
  * Add future language descriptors here. Each descriptor owns its metadata and
@@ -32,4 +33,5 @@ export const languageModes = [
   gleamMode,
 	gitCommitMsgMode,
 	makefileMode,
+	solidityMode,
 ];

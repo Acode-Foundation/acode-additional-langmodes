@@ -80,6 +80,7 @@ async function testHostRuntime() {
 		"gleam",
 		"gitcommitmsg",
 		"makefile",
+		"solidity",
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
@@ -94,6 +95,7 @@ async function testHostRuntime() {
 	assert(modes.get('gitcommitmsg').extensions.includes("^COMMIT_EDITMSG"));
 	assert(modes.get("makefile").extensions.includes("mk"));
 	assert(modes.get("makefile").extensions.includes("Makefile"));
+	assert(modes.get("solidity").extensions.includes("sol"));
 
 	const samples = {
 		asciidoc: `= Project Notes
@@ -194,6 +196,14 @@ ifeq ($(DEBUG),1)
   CFLAGS += -g
 endif
 `,
+		solidity: `pragma solidity ^0.8.24;
+contract Token {
+  uint256 public totalSupply;
+  function mint(address to) public {
+    require(to != address(0));
+  }
+}
+`,
 	};
 
 	for (const [name, source] of Object.entries(samples)) {
@@ -216,7 +226,8 @@ endif
 			name === "asciidoc" ||
 			name === "assembly" ||
 			name === "yaml-enhanced" ||
-			name === "makefile"
+			name === "makefile" ||
+			name === "solidity"
 		) {
 			const nodeNames = new Set();
 			const errors = [];
@@ -241,6 +252,15 @@ endif
 									"Conditional",
 									"AutomaticVariable",
 								]
+							: name === "solidity"
+								? [
+										"PragmaDirective",
+										"ContractDeclaration",
+										"StateVariableDeclaration",
+										"FunctionDefinition",
+										"PrimitiveType",
+										"BuiltinName",
+									]
 							: ["BlockMapping", "FlowMapping", "FlowSequence", "Anchor", "Alias", "Boolean", "Integer"];
 			for (const nodeName of expectedNodes) {
 				assert(

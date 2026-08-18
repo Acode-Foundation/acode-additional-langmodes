@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.7
+
+- Added a Solidity mode with a full Lezer parser, highlighting, indentation, folding, and basic completions.
+
 ## v1.1.6
 
 - Prefer Acode's shared @lezer/lr when available, falling back to a bundled copy for older Acode versions.

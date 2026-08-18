@@ -1,0 +1,24 @@
+# natspec line comments
+/// @notice Transfers tokens
+// regular comment
+==>
+SourceFile(NatSpecLineComment,LineComment)
+
+# pragma and import
+pragma solidity ^0.8.24;
+import {IERC20} from "./IERC20.sol";
+==>
+SourceFile(PragmaDirective(pragma,PragmaName(Identifier),VersionOp,VersionLiteral,";"),ImportDirective(import,ImportClause("{",ImportAlias(VariableDefinition),"}"),from,String,";"))
+
+# user type, error, event
+type Weight is uint128;
+error Insufficient(uint256 available);
+event Transfer(address indexed from, uint256 value);
+==>
+SourceFile(UserDefinedTypeDefinition(type,TypeDefinition,is,PrimitiveType,";"),ErrorDeclaration(error,TypeDefinition,"(",ErrorParameter(PrimitiveType,VariableDefinition),")",";"),EventDefinition(event,TypeDefinition,"(",EventParameter(PrimitiveType,indexed,VariableDefinition),",",EventParameter(PrimitiveType,VariableDefinition),")",";"))
+
+# struct and enum
+struct Point { uint256 x; uint256 y; }
+enum Status { Pending, Active }
+==>
+SourceFile(StructDeclaration(struct,TypeDefinition,StructBody("{",StructMember(PrimitiveType,VariableDefinition,";"),StructMember(PrimitiveType,VariableDefinition,";"),"}")),EnumDeclaration(enum,TypeDefinition,EnumBody("{",EnumValue,",",EnumValue,"}")))

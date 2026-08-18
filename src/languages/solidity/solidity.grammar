@@ -1,0 +1,699 @@
+@precedence {
+  typeArray
+  member
+  index
+  call
+  postfix
+  prefix
+  exp @right
+  times @left
+  plus @left
+  shift @left
+  bitAnd @left
+  bitXor @left
+  bitOr @left
+  rel @left
+  eq @left
+  and @left
+  or @left
+  ternary @right
+  assign @right
+  else @right
+}
+
+@top SourceFile { sourceUnit* }
+
+sourceUnit {
+  PragmaDirective |
+  ImportDirective |
+  UsingDirective |
+  ContractDeclaration |
+  InterfaceDeclaration |
+  LibraryDeclaration |
+  FunctionDefinition |
+  ConstantVariableDeclaration |
+  StructDeclaration |
+  EnumDeclaration |
+  EventDefinition |
+  ErrorDeclaration |
+  UserDefinedTypeDefinition |
+  ";"
+}
+
+kw<term> { @specialize[@name={term}]<identifier, term> }
+ckw<term> { @extend[@name={term}]<identifier, term> }
+
+commaSep<item> { "" | item ("," item?)* }
+commaSep1<item> { item ("," item)* ","? }
+
+// -- Directives -----------------------------------------------------------
+
+PragmaDirective {
+  kw<"pragma"> PragmaName pragmaPart* ";"
+}
+
+PragmaName {
+  @extend[@name=PragmaName]<identifier, "solidity" | "abicoder" | "experimental"> |
+  Identifier
+}
+
+pragmaPart {
+  VersionOp |
+  VersionLiteral |
+  Number |
+  String |
+  Identifier |
+  LogicOp<"||"> |
+  ArithOp<"-">
+}
+
+ImportDirective {
+  kw<"import"> (SourceImport | ImportClause ckw<"from"> String) ";"
+}
+
+SourceImport { String (kw<"as"> VariableDefinition)? }
+
+ImportClause {
+  (Star | VariableDefinition) (kw<"as"> VariableDefinition)? |
+  "{" commaSep1<ImportAlias> "}"
+}
+
+ImportAlias { VariableDefinition (kw<"as"> VariableDefinition)? }
+
+Star { "*" }
+
+UsingDirective {
+  kw<"using"> usingTarget kw<"for"> (Star | type) ckw<"global">? ";"
+}
+
+usingTarget {
+  UserDefinedType |
+  "{" commaSep1<UsingAlias> "}"
+}
+
+UsingAlias {
+  UserDefinedType (kw<"as"> UserDefinableOperator)?
+}
+
+UserDefinableOperator {
+  BitOp<"&" | "|" | "^" | "~"> |
+  ArithOp<"+" | "-" | "*" | "%"> |
+  divOp |
+  CompareOp<"==" | "!=" | "<" | ">" | "<=" | ">=">
+}
+
+// -- Declarations ---------------------------------------------------------
+
+UserDefinedTypeDefinition {
+  kw<"type"> TypeDefinition kw<"is"> primitiveType ";"
+}
+
+ConstantVariableDeclaration {
+  type kw<"constant"> VariableDefinition Eq expression ";"
+}
+
+ContractDeclaration {
+  kw<"abstract">? kw<"contract"> TypeDefinition Heritage? LayoutSpecifier? ContractBody
+}
+
+InterfaceDeclaration {
+  kw<"interface"> TypeDefinition Heritage? ContractBody
+}
+
+LibraryDeclaration {
+  kw<"library"> TypeDefinition ContractBody
+}
+
+Heritage { kw<"is"> commaSep1<InheritanceSpecifier> }
+
+InheritanceSpecifier { UserDefinedType ArgList? }
+
+LayoutSpecifier { ckw<"layout"> ckw<"at"> expression }
+
+ContractBody { "{" contractMember* "}" }
+
+contractMember {
+  FunctionDefinition |
+  ModifierDefinition |
+  ConstructorDefinition |
+  FallbackReceiveDefinition |
+  UnnamedFunction |
+  FunctionTypedStateVar |
+  StateVariableDeclaration |
+  StructDeclaration |
+  EnumDeclaration |
+  EventDefinition |
+  ErrorDeclaration |
+  UsingDirective |
+  UserDefinedTypeDefinition |
+  ";"
+}
+
+StructDeclaration {
+  kw<"struct"> TypeDefinition StructBody
+}
+
+StructBody { "{" StructMember+ "}" }
+
+StructMember { type VariableDefinition ";" }
+
+EnumDeclaration {
+  kw<"enum"> TypeDefinition EnumBody
+}
+
+EnumBody { "{" commaSep<EnumValue> "}" }
+
+EnumValue { identifier }
+
+EventDefinition {
+  kw<"event"> TypeDefinition "(" commaSep<EventParameter> ")" kw<"anonymous">? ";"
+}
+
+EventParameter { type kw<"indexed">? VariableDefinition? }
+
+ErrorDeclaration {
+  kw<"error"> TypeDefinition "(" commaSep<ErrorParameter> ")" ";"
+}
+
+ErrorParameter { type VariableDefinition? }
+
+// -- Definitions ----------------------------------------------------------
+
+StateVariableDeclaration {
+  typeNoFunction stateVarMod* VariableDefinition (Eq expression)? ";"
+}
+
+
+
+stateVarMod {
+  Visibility |
+  kw<"constant"> |
+  kw<"immutable"> |
+  ckw<"transient"> |
+  OverrideSpecifier
+}
+
+Visibility {
+  kw<"public"> | kw<"internal"> | kw<"private"> | kw<"external">
+}
+
+StateMutability {
+  kw<"pure"> | kw<"view"> | kw<"payable">
+}
+
+DataLocation {
+  kw<"memory"> | kw<"storage"> | kw<"calldata">
+}
+
+OverrideSpecifier {
+  kw<"override"> ("(" commaSep1<UserDefinedType> ")")?
+}
+
+ModifierDefinition {
+  kw<"modifier"> FunctionName ParamList? (kw<"virtual"> | OverrideSpecifier)* (Block | ";")
+}
+
+ConstructorDefinition {
+  kw<"constructor"> ParamList constructorSpec* Block
+}
+
+constructorSpec {
+  ModifierInvocation | kw<"payable"> | Visibility
+}
+
+FallbackReceiveDefinition {
+  (kw<"fallback"> | kw<"receive">) ParamList functionSpec* ReturnClause? (Block | ";")
+}
+
+UnnamedFunction {
+  kw<"function"> ParamList functionSpec* ReturnClause? (Block | ";")
+}
+
+FunctionTypedStateVar {
+  kw<"function"> ParamList (Visibility ~fn | StateMutability ~fn)+ ReturnClause?
+  VariableDefinition (Eq expression)? ";"
+}
+
+FunctionDefinition {
+  kw<"function"> FunctionName ParamList functionSpec* ReturnClause? (Block | ";")
+}
+
+functionSpec {
+  Visibility ~fn |
+  StateMutability ~fn |
+  kw<"virtual"> |
+  OverrideSpecifier |
+  ModifierInvocation
+}
+
+ReturnClause { kw<"returns"> ParamList }
+
+ModifierInvocation { UserDefinedType ArgList? }
+
+ParamList { "(" commaSep<Parameter> ")" }
+
+Parameter { type DataLocation? VariableDefinition? }
+
+ArgList { "(" commaSep<callArg> ")" }
+
+callArg {
+  NamedArgs |
+  expression
+}
+
+NamedArgs { "{" commaSep<NamedArg> "}" }
+
+NamedArg { PropertyName ":" expression }
+
+// -- Types ----------------------------------------------------------------
+
+type {
+  FunctionType |
+  typeNoFunction
+}
+
+typeNoFunction {
+  MappingType |
+  ArrayType |
+  AddressPayableType |
+  primitiveType |
+  kw<"var"> |
+  UserDefinedType
+}
+
+primitiveType { PrimitiveType | primitiveName }
+
+primitiveName {
+  @specialize[@name=PrimitiveType]<identifier,
+    "address" | "bool" | "string" | "byte" | "bytes" |
+    "int" | "uint" | "fixed" | "ufixed"
+  >
+}
+
+AddressPayableType { primitiveType kw<"payable"> }
+
+ArrayType { typeNoFunction !typeArray ~bracket "[" expression? "]" }
+
+FunctionType {
+  kw<"function"> ParamList (Visibility | StateMutability)* ReturnClause?
+}
+
+UserDefinedType { TypeName (~dot "." TypeName)* }
+
+MappingType {
+  kw<"mapping"> "(" mappingKey VariableDefinition? Arrow type VariableDefinition? ")"
+}
+
+mappingKey { primitiveType | UserDefinedType }
+
+// -- Statements -----------------------------------------------------------
+
+statement {
+  Block |
+  IfStatement |
+  ForStatement |
+  WhileStatement |
+  DoWhileStatement |
+  TryStatement |
+  ReturnStatement |
+  EmitStatement |
+  RevertStatement |
+  AssemblyStatement |
+  ContinueStatement |
+  BreakStatement |
+  VariableDeclarationStatement |
+  ExpressionStatement |
+  ";"
+}
+
+Block { kw<"unchecked">? "{" statement* "}" }
+
+VariableDeclarationStatement[@dynamicPrecedence=1] {
+  variableDeclaration (Eq expression)? ";" |
+  VariableDeclarationTuple Eq expression ";"
+}
+
+variableDeclaration { type DataLocation? VariableDefinition }
+
+VariableDeclarationTuple {
+  "(" commaSep<variableDeclaration?> ~tuple ")" |
+  kw<"var"> "(" commaSep<VariableDefinition?> ")"
+}
+
+ExpressionStatement { expression ";" }
+
+IfStatement {
+  kw<"if"> "(" expression ")" statement (!else kw<"else"> statement)?
+}
+
+ForStatement {
+  kw<"for"> "("
+  (VariableDeclarationStatement | ExpressionStatement | ";")
+  (ExpressionStatement | ";")
+  expression?
+  ")" statement
+}
+
+WhileStatement { kw<"while"> "(" expression ")" statement }
+
+DoWhileStatement {
+  kw<"do"> statement kw<"while"> "(" expression ")" ";"
+}
+
+ContinueStatement { kw<"continue"> ";" }
+
+BreakStatement { kw<"break"> ";" }
+
+TryStatement {
+  kw<"try"> expression ReturnClause? Block CatchClause+
+}
+
+CatchClause {
+  kw<"catch"> (Identifier? ParamList)? Block
+}
+
+ReturnStatement { kw<"return"> expression? ";" }
+
+EmitStatement { kw<"emit"> expression ArgList ";" }
+
+RevertStatement { kw<"revert"> expression? ";" }
+
+// -- Assembly / Yul -------------------------------------------------------
+
+AssemblyStatement {
+  kw<"assembly"> String? AssemblyFlags? YulBlock
+}
+
+AssemblyFlags { "(" commaSep<String> ")" }
+
+YulBlock { "{" yulStatement* "}" }
+
+yulStatement {
+  YulBlock |
+  YulVariableDeclaration |
+  YulFunctionDefinition |
+  YulIfStatement |
+  YulForStatement |
+  YulSwitchStatement |
+  YulLeave |
+  YulBreak |
+  YulContinue |
+  YulFunctionCall |
+  YulAssignment |
+  YulLabel |
+  YulLiteral
+}
+
+YulLeave { kw<"leave"> }
+YulBreak { kw<"break"> }
+YulContinue { kw<"continue"> }
+
+YulLabel { YulIdentifier ":" }
+
+YulVariableDeclaration {
+  kw<"let"> yulIdentList (YulAssign yulExpression)?
+}
+
+yulIdentList {
+  "(" YulIdentifier ("," YulIdentifier)* ")" |
+  YulIdentifier ("," YulIdentifier)*
+}
+
+YulAssignment {
+  YulPath ("," YulPath)* YulAssign yulExpression
+}
+
+YulPath { YulIdentifier ("." YulIdentifier)* }
+
+yulExpression {
+  YulFunctionCall |
+  YulPath |
+  YulLiteral
+}
+
+YulFunctionCall {
+  yulCallee "(" commaSep<yulExpression> ")"
+}
+
+yulCallee {
+  YulBuiltin |
+  BuiltinName |
+  primitiveType |
+  kw<"return"> |
+  kw<"revert"> |
+  YulIdentifier
+}
+
+YulIfStatement { kw<"if"> yulExpression YulBlock }
+
+YulForStatement {
+  kw<"for"> YulBlock yulExpression YulBlock YulBlock
+}
+
+YulSwitchStatement {
+  kw<"switch"> yulExpression (YulCase+ YulDefault? | YulDefault)
+}
+
+YulCase { kw<"case"> YulLiteral YulBlock }
+
+YulDefault { kw<"default"> YulBlock }
+
+YulFunctionDefinition {
+  kw<"function"> YulIdentifier "(" commaSep<YulIdentifier> ")"
+  ("->" commaSep1<YulIdentifier>)?
+  YulBlock
+}
+
+YulLiteral {
+  BooleanLiteral |
+  HexString |
+  UnicodeString |
+  String |
+  NumberLiteral
+}
+
+YulBuiltin[@dynamicPrecedence=1] {
+  @extend[@name=YulBuiltin]<identifier,
+    "stop" | "add" | "sub" | "mul" | "div" | "sdiv" | "mod" | "smod" | "exp" |
+    "not" | "lt" | "gt" | "slt" | "sgt" | "eq" | "iszero" | "and" | "or" | "xor" |
+    "shl" | "shr" | "sar" | "signextend" |
+    "pop" | "mload" | "mcopy" | "tload" | "tstore" | "mstore" | "mstore8" |
+    "sload" | "sstore" | "msize" | "gas" | "balance" | "selfbalance" |
+    "caller" | "callvalue" | "calldataload" | "calldatasize" | "calldatacopy" |
+    "extcodesize" | "extcodecopy" | "returndatasize" | "returndatacopy" |
+    "extcodehash" | "create" | "create2" | "call" | "callcode" |
+    "delegatecall" | "staticcall" | "invalid" |
+    "log0" | "log1" | "log2" | "log3" | "log4" |
+    "chainid" | "origin" | "gasprice" |
+    "basefee" | "blobfee" | "coinbase" | "timestamp" | "number" |
+    "difficulty" | "gaslimit" | "prevrandao" | "blobbasefee"
+  >
+}
+
+// -- Expressions ----------------------------------------------------------
+
+expression {
+  NumberLiteral |
+  StringLiteral |
+  BooleanLiteral |
+  Placeholder |
+  SpecialVariable |
+  BuiltinName |
+  VariableName |
+  primitiveType |
+  NewExpression |
+  PayableConversion |
+  MetaTypeExpression |
+  ParenthesizedExpression |
+  TupleExpression |
+  InlineArrayExpression |
+  MemberExpression |
+  IndexExpression |
+  SliceExpression |
+  CallExpression |
+  TypeCastExpression |
+  UnaryExpression |
+  UpdateExpression |
+  BinaryExpression |
+  ConditionalExpression |
+  AssignmentExpression
+}
+
+NumberLiteral { Number NumberUnit? }
+
+NumberUnit {
+  @extend[@name=NumberUnit]<identifier,
+    "wei" | "gwei" | "szabo" | "finney" | "ether" |
+    "seconds" | "minutes" | "hours" | "days" | "weeks" | "years"
+  >
+}
+
+StringLiteral { (String | HexString | UnicodeString)+ }
+
+BooleanLiteral { @specialize[@name=BooleanLiteral]<identifier, "true" | "false"> }
+
+Placeholder { @specialize[@name=Placeholder]<identifier, "_"> }
+
+SpecialVariable {
+  kw<"this"> |
+  kw<"super"> |
+  @specialize[@name=SpecialVariable]<identifier, "msg" | "block" | "tx" | "abi" | "now">
+}
+
+BuiltinName {
+  @specialize[@name=BuiltinName]<identifier,
+    "require" | "assert" | "keccak256" | "sha256" | "sha3" |
+    "ripemd160" | "ecrecover" | "addmod" | "mulmod" |
+    "selfdestruct" | "suicide" | "blockhash" | "blobhash" | "gasleft"
+  >
+}
+
+NewExpression { kw<"new"> typeNoFunction (!call ArgList)? }
+
+PayableConversion { kw<"payable"> ArgList }
+
+MetaTypeExpression { kw<"type"> "(" type ")" }
+
+TypeCastExpression { primitiveType !call ArgList }
+
+ParenthesizedExpression { "(" expression ")" }
+
+TupleExpression { "(" expression? ("," expression?)+ ~tuple ")" }
+
+InlineArrayExpression { "[" commaSep<expression> "]" }
+
+MemberExpression { expression !member ~dot "." PropertyName }
+
+IndexExpression { expression !index ~bracket "[" expression? "]" }
+
+SliceExpression { expression !index ~bracket "[" expression? ":" expression? "]" }
+
+CallExpression { expression !call ArgList }
+
+UnaryExpression {
+  !prefix (kw<"delete"> | UpdateOp | ArithOp<"+" | "-"> | LogicOp<"!"> | BitOp<"~">) expression
+}
+
+UpdateExpression { expression !postfix UpdateOp }
+
+BinaryExpression {
+  expression !exp ArithOp<"**"> expression |
+  expression !times (ArithOp<"*" | "%"> | divOp) expression |
+  expression !plus ArithOp<"+" | "-"> expression |
+  expression !shift BitOp<"<<" | ">>"> expression |
+  expression !bitAnd BitOp<"&"> expression |
+  expression !bitXor BitOp<"^"> expression |
+  expression !bitOr BitOp<"|"> expression |
+  expression !rel CompareOp<"<" | ">" | "<=" | ">="> expression |
+  expression !eq CompareOp<"==" | "!="> expression |
+  expression !and LogicOp<"&&"> expression |
+  expression !or LogicOp<"||"> expression
+}
+
+ConditionalExpression {
+  expression !ternary LogicOp<"?"> expression LogicOp<":"> expression
+}
+
+AssignmentExpression {
+  expression !assign (AssignOp | Eq) expression
+}
+
+VariableName { identifier ~name }
+VariableDefinition { identifier ~name }
+FunctionName { identifier }
+TypeName { identifier ~name }
+TypeDefinition { identifier }
+PropertyName { identifier }
+Identifier { identifier }
+YulIdentifier { identifier }
+
+@skip { spaces | newline | NatSpecLineComment | NatSpecBlockComment | LineComment | BlockComment }
+
+@tokens {
+  spaces { $[\u0009 \u000b\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]+ }
+  newline { $[\r\n\u2028\u2029] }
+
+  NatSpecLineComment[isolate] { "///" ![\n]* }
+  LineComment[isolate] { "//" ![\n]* }
+
+  NatSpecBlockComment[isolate] { "/**" (![*] | "*" ![/])* "*/" }
+  BlockComment[isolate] { "/*" (![*] | "*" ![/])* "*/" }
+
+  HexString {
+    "hex" '"' ($[0-9a-fA-F_] | $[ \t])* '"' |
+    "hex" "'" ($[0-9a-fA-F_] | $[ \t])* "'"
+  }
+
+  UnicodeString {
+    "unicode" '"' (!["\\\n] | "\\" _)* '"' |
+    "unicode" "'" (!['\\\n] | "\\" _)* "'"
+  }
+
+  String {
+    '"' (!["\\\n] | "\\" _)* '"' |
+    "'" (!['\\\n] | "\\" _)* "'"
+  }
+
+  VersionLiteral {
+    $[0-9*]+ ("." $[0-9*]+)+ |
+    '"' $[0-9*. \t]+ '"'
+  }
+
+  VersionOp { "^" | "~" | "<=" | ">=" | "<" | ">" }
+
+  Number {
+    "0x" $[0-9a-fA-F] ($[0-9a-fA-F_])* |
+    "0X" $[0-9a-fA-F] ($[0-9a-fA-F_])* |
+    @digit ($[0-9_])* ("." $[0-9_]+)? ($[eE] $[+\-]? $[0-9_]+)? |
+    "." @digit $[0-9_]* ($[eE] $[+\-]? $[0-9_]+)?
+  }
+
+  PrimitiveType {
+    ("int" | "uint" | "bytes") @digit+ |
+    ("fixed" | "ufixed") @digit+ "x" @digit+
+  }
+
+  identifier { $[a-zA-Z$_] $[a-zA-Z0-9$_]* }
+
+  ArithOp<expr> { expr }
+  LogicOp<expr> { expr }
+  BitOp<expr> { expr }
+  CompareOp<expr> { expr }
+  UpdateOp { "++" | "--" }
+  divOp[@name=ArithOp] { "/" }
+  AssignOp { "+=" | "-=" | "*=" | "/=" | "%=" | "^=" | "&=" | "|=" | "<<=" | ">>=" }
+
+  Eq { "=" }
+  Arrow { "=>" }
+  YulAssign { ":=" }
+  "->"
+
+  "(" ")" "[" "]" "{" "}"
+  "." "," ";" ":" "*"
+
+  @precedence {
+    NatSpecLineComment,
+    LineComment,
+    NatSpecBlockComment,
+    BlockComment,
+    HexString,
+    UnicodeString,
+    String,
+    VersionLiteral,
+    Number,
+    PrimitiveType,
+    identifier,
+    AssignOp,
+    UpdateOp,
+    VersionOp,
+    Arrow,
+    YulAssign,
+    "->"
+  }
+
+  @precedence { NatSpecLineComment, LineComment, divOp }
+  @precedence { NatSpecBlockComment, BlockComment, divOp }
+  @precedence { Number, "." }
+}
+
+@detectDelim

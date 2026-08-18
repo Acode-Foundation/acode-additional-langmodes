@@ -893,3 +893,293 @@ try {
 } finally {
 	fs.rmSync(makefileBehaviorBundle, { force: true });
 }
+
+const { parser: solidityParser } = await bundledRequire(
+	"src/languages/solidity/parser.js",
+	"acode-solidity-parser-test.cjs",
+);
+
+const solidityFixturePath = "src/languages/solidity/test.txt";
+const solidityTreeTests = fileTests(
+	fs.readFileSync(solidityFixturePath, "utf8"),
+	solidityFixturePath,
+);
+for (const test of solidityTreeTests) test.run(solidityParser);
+console.log(`Validated ${solidityTreeTests.length} Solidity Lezer parser fixtures.`);
+
+const soliditySamples = [
+	{
+		name: "contracts, types, statements, assembly",
+		source: `// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IERC20} from "./IERC20.sol";
+
+/// @title Token
+/// @notice A simple token
+type Weight is uint128;
+
+error InsufficientBalance(uint256 available, uint256 required);
+
+event Transfer(address indexed from, address indexed to, uint256 value);
+
+struct Point {
+  uint256 x;
+  uint256 y;
+}
+
+enum Status { Pending, Active, Done }
+
+using SafeMath for uint256;
+
+uint256 constant MAX = 100 ether;
+
+abstract contract Ownable {
+  address public owner;
+
+  modifier onlyOwner() {
+    require(msg.sender == owner, "not owner");
+    _;
+  }
+
+  constructor() {
+    owner = msg.sender;
+  }
+}
+
+interface IERC20 {
+  function transfer(address to, uint256 amount) external returns (bool);
+}
+
+library SafeMath {
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a + b;
+  }
+}
+
+contract Token is Ownable, IERC20 {
+  mapping(address account => uint256 amount) private _balances;
+  uint256 public totalSupply;
+  uint256 transient cached;
+
+  constructor(uint256 initial) payable {
+    totalSupply = initial;
+    _balances[msg.sender] = initial;
+  }
+
+  function transfer(address to, uint256 amount) public override onlyOwner returns (bool) {
+    if (amount == 0) {
+      revert InsufficientBalance({available: 0, required: amount});
+    }
+    unchecked {
+      _balances[msg.sender] -= amount;
+      _balances[to] += amount;
+    }
+    emit Transfer(msg.sender, to, amount);
+    return true;
+  }
+
+  fallback() external payable {}
+  receive() external payable {}
+
+  function sum(uint256[] memory xs) external pure returns (uint256 s) {
+    for (uint256 i = 0; i < xs.length; i++) {
+      s += xs[i];
+    }
+    while (s > 0) {
+      s--;
+      break;
+    }
+    return s;
+  }
+
+  function yulAdd(uint256 a, uint256 b) public pure returns (uint256 r) {
+    assembly ("memory-safe") {
+      let x := add(a, b)
+      r := x
+    }
+  }
+}
+`,
+		nodes: [
+			"PragmaDirective",
+			"ImportDirective",
+			"UserDefinedTypeDefinition",
+			"ErrorDeclaration",
+			"EventDefinition",
+			"StructDeclaration",
+			"EnumDeclaration",
+			"UsingDirective",
+			"ConstantVariableDeclaration",
+			"ContractDeclaration",
+			"InterfaceDeclaration",
+			"LibraryDeclaration",
+			"ModifierDefinition",
+			"ConstructorDefinition",
+			"FunctionDefinition",
+			"StateVariableDeclaration",
+			"MappingType",
+			"FallbackReceiveDefinition",
+			"IfStatement",
+			"ForStatement",
+			"WhileStatement",
+			"RevertStatement",
+			"EmitStatement",
+			"ReturnStatement",
+			"AssemblyStatement",
+			"YulVariableDeclaration",
+			"YulAssignment",
+			"YulFunctionCall",
+			"YulBuiltin",
+			"NatSpecLineComment",
+			"LineComment",
+			"PrimitiveType",
+			"NumberLiteral",
+			"NumberUnit",
+			"BooleanLiteral",
+			"Placeholder",
+			"SpecialVariable",
+			"BuiltinName",
+		],
+	},
+];
+
+for (const sample of soliditySamples) {
+	const tree = solidityParser.parse(sample.source);
+	const names = new Set();
+	const errors = [];
+
+	tree.iterate({
+		enter(node) {
+			names.add(node.name);
+			if (node.type.isError) {
+				errors.push([node.from, node.to, sample.source.slice(node.from, node.to)]);
+			}
+		},
+	});
+
+	assert.equal(
+		errors.length,
+		0,
+		`${sample.name} produced parse errors: ${JSON.stringify(errors)}`,
+	);
+	assert.equal(
+		tree.length,
+		sample.source.length,
+		`${sample.name} was not fully parsed`,
+	);
+	for (const node of sample.nodes) {
+		assert(names.has(node), `${sample.name} did not produce ${node}`);
+	}
+}
+
+console.log(`Validated ${soliditySamples.length} Solidity parser fixtures.`);
+
+const solidityBehaviorBundle = path.join(
+	os.tmpdir(),
+	"acode-solidity-behavior-test-bundle.mjs",
+);
+const solidityBehaviorSource = String.raw`
+import assert from "node:assert/strict";
+import { CompletionContext } from "@codemirror/autocomplete";
+import { EditorState } from "@codemirror/state";
+import { foldable, getIndentation, indentUnit, syntaxTree } from "@codemirror/language";
+import { classHighlighter, highlightTree } from "@lezer/highlight";
+import { solidity, solidityLanguage } from "./src/languages/solidity/index.js";
+
+const source = [
+  "// SPDX-License-Identifier: MIT",
+  "pragma solidity ^0.8.24;",
+  "/// @notice demo",
+  "contract Token {",
+  "  uint256 public totalSupply;",
+  "  function mint(address to) public {",
+  "    require(to != address(0), \"bad\");",
+  "    emit Transfer(to, 1 ether);",
+  "  }",
+  "}",
+  "",
+].join("\n");
+
+const tree = solidityLanguage.parser.parse(source);
+const names = new Set();
+const errors = [];
+tree.iterate({
+  enter(node) {
+    names.add(node.name);
+    if (node.type.isError) errors.push([node.from, node.to]);
+  },
+});
+assert.equal(errors.length, 0, "Solidity fixture produced parse errors");
+for (const name of [
+  "PragmaDirective",
+  "ContractDeclaration",
+  "StateVariableDeclaration",
+  "FunctionDefinition",
+  "PrimitiveType",
+  "BuiltinName",
+  "NumberUnit",
+]) {
+  assert(names.has(name), "Solidity fixture did not produce " + name);
+}
+
+const spans = [];
+highlightTree(tree, classHighlighter, (from, to, cls) => {
+  spans.push({ text: source.slice(from, to), cls });
+});
+
+function isHighlighted(text, tokenClass) {
+  return spans.some((span) => span.text === text && span.cls.includes(tokenClass));
+}
+
+assert(spans.some((span) => span.cls.includes("tok-comment") && span.text.includes("SPDX")));
+assert(spans.some((span) => span.text.includes("///") && span.text.includes("@notice") && span.cls.includes("tok-comment")));
+assert(isHighlighted("pragma", "tok-keyword"));
+assert(isHighlighted("contract", "tok-keyword"));
+assert(isHighlighted("function", "tok-keyword"));
+assert(isHighlighted("uint256", "tok-typeName"));
+assert(isHighlighted("require", "tok-variableName"));
+assert(spans.some((span) => span.cls.includes("tok-number") && span.text.includes("1")));
+assert(isHighlighted("ether", "tok-atom") || isHighlighted("ether", "tok-keyword") || isHighlighted("ether", "tok-unit"));
+
+const indentSource = "contract C {\n  function f() public {\n    if (true) {\n      return;\n    }\n  }\n}\n";
+const indentState = EditorState.create({
+  doc: indentSource,
+  extensions: [solidity(), indentUnit.of("  ")],
+});
+syntaxTree(indentState);
+assert.equal(getIndentation(indentState, indentState.doc.line(2).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(3).from), 4);
+assert(foldable(indentState, indentState.doc.line(1).from, indentState.doc.line(1).to));
+
+const state = EditorState.create({ doc: "con", extensions: [solidity()] });
+const sourceFn = state.languageDataAt("autocomplete", 3)[0];
+const result = sourceFn(new CompletionContext(state, 3, true));
+assert(result.options.some((option) => option.label === "contract"));
+const typeState = EditorState.create({ doc: "uint", extensions: [solidity()] });
+const typeSource = typeState.languageDataAt("autocomplete", 4)[0];
+const typeResult = typeSource(new CompletionContext(typeState, 4, true));
+assert(typeResult.options.some((option) => option.label === "uint256"));
+
+console.log("Validated Solidity parsing, highlighting, indentation, folding, and completion fixtures.");
+`;
+
+await build({
+	stdin: {
+		contents: solidityBehaviorSource,
+		resolveDir: process.cwd(),
+		sourcefile: "solidity-behavior-test.mjs",
+		loader: "js",
+	},
+	bundle: true,
+	format: "esm",
+	platform: "node",
+	outfile: solidityBehaviorBundle,
+	logLevel: "silent",
+});
+
+try {
+	await import(pathToFileURL(solidityBehaviorBundle).href + `?t=${Date.now()}`);
+} finally {
+	fs.rmSync(solidityBehaviorBundle, { force: true });
+}
