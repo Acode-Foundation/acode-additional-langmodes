@@ -63,6 +63,7 @@ async function testHostRuntime() {
 		"zig",
 		"gitignore",
 		"jsonc",
+		"jsonl",
 		"yaml-enhanced",
 		"bibtex",
 		"elixir",
@@ -90,6 +91,10 @@ async function testHostRuntime() {
 	assert(modes.get("zig").extensions.includes("zon"));
 	assert(modes.get("gitignore").extensions.includes("gitignore"));
 	assert(modes.get("jsonc").extensions.includes("jsonc"));
+	assert(modes.get("jsonl").extensions.includes("jsonl"));
+	assert(modes.get("jsonl").extensions.includes("ndjson"));
+	assert(modes.get("jsonl").extensions.includes("jsonlines"));
+	assert(modes.get("jsonl").extensions.includes("ldjson"));
 	assert(modes.get("yaml-enhanced").extensions.includes("yaml"));
 	assert(modes.get("yaml-enhanced").extensions.includes("yml"));
 	assert(modes.get('gitcommitmsg').extensions.includes("^COMMIT_EDITMSG"));
@@ -131,6 +136,7 @@ message:
 		zig: 'const std = @import("std");',
 		gitignore: "# build output\ndist/\n!important.log\n*.tmp\n",
 		jsonc: '{\n  // comment\n  "foo": "bar",\n}',
+		jsonl: '{"id": 1, "name": "Acode"}\n{"id": 2, "name": "CodeMirror", "active": true}\n// comment\n[1, 2, 3]\n',
 		"yaml-enhanced": `defaults: &defaults
   enabled: true
   retries: 3
