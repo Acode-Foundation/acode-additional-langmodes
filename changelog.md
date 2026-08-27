@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.1.8
+
+- Added Jsonl mode
+
 ## v1.1.7
 
 - Added a Solidity mode with a full Lezer parser, highlighting, indentation, folding, and basic completions.
