@@ -179,6 +179,170 @@ for (const sample of jsoncSamples) {
 
 console.log(`Validated ${jsoncSamples.length} JSONC parser fixtures.`);
 
+// Test JSONL Parser
+const { parser: jsonlParser } = await bundledRequire(
+	"src/languages/jsonl/parser.js",
+	"acode-jsonl-parser-test.cjs",
+);
+
+const jsonlSamples = [
+	{
+		name: "JSON Lines multiple objects and comments",
+		source: `{"id": 1, "name": "Acode", "active": true}
+{"id": 2, "name": "CodeMirror", "meta": null, "count": -3.14e+2}
+// Line comment between records
+/* Block comment */
+{"items": [1, "two", false]}
+"plain string line"
+12345
+true
+null
+`,
+		nodes: [
+			"Object",
+			"Property",
+			"PropertyName",
+			"Number",
+			"String",
+			"True",
+			"False",
+			"Null",
+			"Array",
+			"LineComment",
+			"BlockComment",
+		],
+	},
+];
+
+for (const sample of jsonlSamples) {
+	const tree = jsonlParser.parse(sample.source);
+	const names = new Set();
+	const errors = [];
+
+	tree.iterate({
+		enter(node) {
+			names.add(node.name);
+			if (node.type.isError) {
+				errors.push([node.from, node.to]);
+			}
+		},
+	});
+
+	assert.equal(errors.length, 0, `${sample.name} produced parse errors`);
+	assert.equal(tree.length, sample.source.length, `${sample.name} was not fully parsed`);
+	for (const node of sample.nodes) {
+		assert(names.has(node), `${sample.name} did not produce ${node}`);
+	}
+}
+
+console.log(`Validated ${jsonlSamples.length} JSONL parser fixtures.`);
+
+const jsonlBehaviorBundle = path.join(os.tmpdir(), "acode-jsonl-behavior-test-bundle.mjs");
+const jsonlBehaviorSource = String.raw`
+import assert from "node:assert/strict";
+import { CompletionContext } from "@codemirror/autocomplete";
+import { EditorState } from "@codemirror/state";
+import { foldable, getIndentation, indentUnit, syntaxTree } from "@codemirror/language";
+import { classHighlighter, highlightTree } from "@lezer/highlight";
+import { jsonl, jsonlLanguage } from "./src/languages/jsonl/index.js";
+
+const source = [
+  '{"id": 1, "name": "Acode", "valid": true}',
+  '// comment line',
+  '{"tags": ["editor", "mobile"], "meta": null, "score": -4.5e1}',
+  '/* block comment */',
+  '{"nested": {',
+  '  "key": "value"',
+  '}}',
+  '',
+].join("\n");
+
+const tree = jsonlLanguage.parser.parse(source);
+const names = new Set();
+const errors = [];
+tree.iterate({
+  enter(node) {
+    names.add(node.name);
+    if (node.type.isError) errors.push([node.from, node.to]);
+  },
+});
+
+assert.equal(errors.length, 0, "JSONL fixture produced parse errors");
+for (const name of [
+  "Object",
+  "Property",
+  "PropertyName",
+  "Number",
+  "String",
+  "True",
+  "Null",
+  "Array",
+  "LineComment",
+  "BlockComment",
+]) {
+  assert(names.has(name), "JSONL fixture did not produce " + name);
+}
+
+const spans = [];
+highlightTree(tree, classHighlighter, (from, to, cls) => {
+  spans.push({ text: source.slice(from, to), cls });
+});
+
+function isHighlighted(text, tokenClass) {
+  return spans.some((span) => span.text === text && span.cls.includes(tokenClass));
+}
+
+assert(isHighlighted('"name"', "tok-propertyName"));
+assert(isHighlighted('"Acode"', "tok-string"));
+assert(isHighlighted("1", "tok-number"));
+assert(isHighlighted("-4.5e1", "tok-number"));
+assert(isHighlighted("true", "tok-bool"));
+assert(isHighlighted("null", "tok-keyword"));
+assert(isHighlighted('// comment line', "tok-comment"));
+assert(isHighlighted('/* block comment */', "tok-comment"));
+
+const indentSource = '{\n  "nested": {\n    "key": "val"\n  }\n}\n';
+const indentState = EditorState.create({
+  doc: indentSource,
+  extensions: [jsonl(), indentUnit.of("  ")],
+});
+syntaxTree(indentState);
+assert.equal(getIndentation(indentState, indentState.doc.line(2).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(3).from), 4);
+assert.equal(getIndentation(indentState, indentState.doc.line(4).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(5).from), 0);
+assert(foldable(indentState, indentState.doc.line(1).from, indentState.doc.line(1).to));
+
+const compState = EditorState.create({ doc: "tr", extensions: [jsonl()] });
+const compSource = compState.languageDataAt("autocomplete", 2)[0];
+const compResult = compSource(new CompletionContext(compState, 2, true));
+assert(compResult.options.some((opt) => opt.label === "true"));
+assert(compResult.options.some((opt) => opt.label === "false"));
+assert(compResult.options.some((opt) => opt.label === "null"));
+
+console.log("Validated JSONL parsing, highlighting, indentation, folding, and completion fixtures.");
+`;
+
+await build({
+	stdin: {
+		contents: jsonlBehaviorSource,
+		resolveDir: process.cwd(),
+		sourcefile: "jsonl-behavior-test.mjs",
+		loader: "js",
+	},
+	bundle: true,
+	format: "esm",
+	platform: "node",
+	outfile: jsonlBehaviorBundle,
+	logLevel: "silent",
+});
+
+try {
+	await import(pathToFileURL(jsonlBehaviorBundle).href + `?t=${Date.now()}`);
+} finally {
+	fs.rmSync(jsonlBehaviorBundle, { force: true });
+}
+
 const yamlBehaviorBundle = path.join(os.tmpdir(), "acode-yaml-behavior-test-bundle.mjs");
 const yamlBehaviorSource = String.raw`
 import assert from "node:assert/strict";
