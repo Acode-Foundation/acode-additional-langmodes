@@ -19,6 +19,7 @@ export const {
 	indentNodeProp,
 	indentService,
 	delimitedIndent,
+	ensureSyntaxTree,
 	sublanguageProp,
 	syntaxTree,
 } = language;

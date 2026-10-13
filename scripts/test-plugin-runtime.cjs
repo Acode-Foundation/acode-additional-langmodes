@@ -18,9 +18,14 @@ let unmountPlugin;
 const registered = [];
 const unregistered = [];
 
+// Modes the mocked host already provides. Current Acode ships legacy modes
+// for the replacement languages; the "future" test clears them.
+const legacyReplacedModes = ["c", "clojure", "kotlin", "latex", "lua", "swift"];
+const hostModes = new Set(["yaml", ...legacyReplacedModes]);
+
 const editorLanguages = {
 	get(name) {
-		return name === "yaml" ? { name: "yaml" } : null;
+		return hostModes.has(name) ? { name } : null;
 	},
 	register(name, extensions, caption, load) {
 		registered.push({ name, extensions, caption, load });
@@ -65,14 +70,17 @@ async function testHostRuntime() {
 		"jsonc",
 		"jsonl",
 		"yaml-enhanced",
+		"ada",
 		"bibtex",
 		"elixir",
 		"golfscript",
 		"graphql",
 		"dot",
+		"handlebars",
 		"hcl",
 		"j",
 		"janet",
+		"nix",
 		"pkl",
 		"svelte",
 		"wgsl",
@@ -82,6 +90,13 @@ async function testHostRuntime() {
 		"gitcommitmsg",
 		"makefile",
 		"solidity",
+		"mustache",
+		"c-enhanced",
+		"clojure-enhanced",
+		"kotlin-enhanced",
+		"latex-enhanced",
+		"lua-enhanced",
+		"swift-enhanced",
 	];
 
 	assert.deepEqual([...modes.keys()], expectedNames);
@@ -101,6 +116,10 @@ async function testHostRuntime() {
 	assert(modes.get("makefile").extensions.includes("mk"));
 	assert(modes.get("makefile").extensions.includes("Makefile"));
 	assert(modes.get("solidity").extensions.includes("sol"));
+	assert(modes.get("kotlin-enhanced").extensions.includes("kts"));
+	assert.equal(modes.get("kotlin-enhanced").caption, "Kotlin (Enhanced)");
+	assert(modes.get("latex-enhanced").extensions.includes("tex"));
+	assert(modes.get("handlebars").extensions.includes("hbs"));
 
 	const samples = {
 		asciidoc: `= Project Notes
@@ -209,6 +228,38 @@ contract Token {
     require(to != address(0));
   }
 }
+`,
+		ada: `with Ada.Text_IO;
+procedure Hello is
+begin
+   Ada.Text_IO.Put_Line ("Hello");
+end Hello;
+`,
+		handlebars: "<ul>{{#each items}}<li>{{this.name}}</li>{{/each}}</ul>\n",
+		nix: '{ pkgs ? import <nixpkgs> {} }:\npkgs.mkShell { buildInputs = [ pkgs.hello ]; }\n',
+		mustache: "<h1>{{title}}</h1>\n{{#items}}<li>{{name}}</li>{{/items}}\n{{! comment }}\n",
+		"c-enhanced": '#include <stdio.h>\nint main(void) { printf("%d\\n", 1); return 0; }\n',
+		"clojure-enhanced": '(ns app.core)\n(defn greet [name] (str "Hello, " name))\n',
+		"kotlin-enhanced": `package app
+
+data class User(val name: String, val age: Int = 0)
+
+fun main() {
+    val users = listOf(User("a"), User("b", 2))
+    users.filter { it.age > 0 }.forEach { println("\${it.name}") }
+}
+`,
+		"latex-enhanced": `\\documentclass{article}
+\\begin{document}
+\\section{Intro}
+Inline $x^2$ math.
+\\end{document}
+`,
+		"lua-enhanced": 'local function greet(name)\n  return "Hello, " .. name\nend\nprint(greet("x"))\n',
+		"swift-enhanced": `struct User {
+    let name: String
+}
+func greet(_ user: User) -> String { "Hello, \\(user.name)" }
 `,
 	};
 
@@ -394,8 +445,35 @@ endif
 	);
 }
 
+/**
+ * Once Acode drops its legacy modes, replacement modes must take the
+ * canonical name and caption instead of the "-enhanced" fallback.
+ */
+async function testReplacementsWithoutLegacyModes() {
+	registered.length = 0;
+	unregistered.length = 0;
+	for (const name of legacyReplacedModes) hostModes.delete(name);
+	try {
+		await initPlugin("file:///plugin/", null, {});
+		const modes = new Map(registered.map((mode) => [mode.name, mode]));
+		for (const name of legacyReplacedModes) {
+			assert(modes.has(name), `${name} should register under its canonical name`);
+			assert(!modes.has(`${name}-enhanced`), `${name}-enhanced should not register`);
+			assert(!modes.get(name).caption.includes("Enhanced"));
+			assert(modes.get(name).load()?.language, `${name} did not return LanguageSupport`);
+		}
+		assert.equal(modes.get("kotlin").caption, "Kotlin");
+		await unmountPlugin();
+		assert(unregistered.includes("kotlin"));
+	} finally {
+		for (const name of legacyReplacedModes) hostModes.add(name);
+	}
+	console.log("Validated replacement modes take canonical names without legacy modes.");
+}
+
 async function test() {
 	await testHostRuntime();
+	await testReplacementsWithoutLegacyModes();
 	await testBundledLezerFallback();
 }
 

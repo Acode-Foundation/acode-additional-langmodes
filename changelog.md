@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.0
+
+- Added Lezer-based C, Clojure, Kotlin, LaTeX, Lua, and Swift modes, used by
+  default for their file extensions.
+- Added Ada, Handlebars, Mustache, and Nix modes.
+
 ## v1.1.8
 
 - Added Jsonl mode

@@ -29,9 +29,33 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - Gleam (`.gleam`)
 - Makefile (`.mk`, `.mak`, `.make`, `Makefile`, `makefile`, `GNUmakefile`)
 - Solidity (`.sol`)
+- Ada (`.ada`, `.adb`, `.ads`)
+- Handlebars (`.hbs`, `.handlebars`)
+- Mustache (`.mustache`)
+- Nix (`.nix`)
+
+### Enhanced replacements for legacy modes
+
+Current Acode highlights these languages with `@codemirror/legacy-modes`
+stream tokenizers (C uses the C++ grammar). The plugin provides Lezer-based
+community parsers and makes them the default for matching files.
+
+While Acode still ships its own mode, the plugin registers as
+`<name>-enhanced` ("Kotlin (Enhanced)") so both stay in the mode picker. Once
+Acode drops it, the plugin registers under the canonical name (`kotlin`,
+"Kotlin").
+
+- C (`.c`, `.h`, `.ino`)
+- Clojure (`.clj`, `.cljs`, `.cljc`, `.cljx`, `.edn`)
+- Kotlin (`.kt`, `.kts`)
+- LaTeX (`.tex`, `.ltx`, `.sty`, `.cls`, `.latex`)
+- Lua (`.lua`)
+- Swift (`.swift`)
 
 Community modes are registered only when Acode does not already provide a mode
-with the same name. Languages already covered by Acode's
+with the same name. Replacement modes list at least the same extensions as
+Acode's mode, so Acode's modelist tie-break (later registration wins) selects
+them while both exist. Languages already covered by Acode's
 `@codemirror/language-data` registry are intentionally not duplicated.
 
 ## Adding another language

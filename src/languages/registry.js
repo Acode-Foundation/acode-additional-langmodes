@@ -17,9 +17,18 @@ export class LanguageModeRegistry {
 	}
 
 	register(mode) {
-		const name = normalizeName(mode?.name);
+		let name = normalizeName(mode?.name);
 		if (!name || typeof mode?.load !== "function") {
 			throw new TypeError("Invalid language mode descriptor.");
+		}
+
+		let caption = mode.caption || name;
+		// Replacement modes coexist with an existing Acode mode of the same
+		// name under an "-enhanced" name, and take the canonical name once
+		// Acode no longer ships its own.
+		if (mode.replaces && this.editorLanguages.get?.(name)) {
+			name = `${name}-enhanced`;
+			caption = `${caption} (Enhanced)`;
 		}
 
 		// Do not shadow a language that a future Acode release may bundle.
@@ -29,12 +38,7 @@ export class LanguageModeRegistry {
 		}
 
 		const extensions = [...new Set(mode.extensions || [])];
-		this.editorLanguages.register(
-			name,
-			extensions,
-			mode.caption || name,
-			mode.load,
-		);
+		this.editorLanguages.register(name, extensions, caption, mode.load);
 		this.registeredNames.push(name);
 		return true;
 	}

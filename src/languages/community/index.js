@@ -1,9 +1,12 @@
 import { bibtexLanguage } from "@citedrive/codemirror-lang-bibtex";
 import { LanguageSupport } from "@codemirror/language";
 import { wgsl } from "@iizukak/codemirror-lang-wgsl";
+import { nix } from "@replit/codemirror-lang-nix";
 import { svelte } from "@replit/codemirror-lang-svelte";
 import { dot } from "@viz-js/lang-dot";
+import { handlebarsLanguage } from "@xiechao/codemirror-lang-handlebars";
 import { graphqlLanguageSupport } from "cm6-graphql";
+import { ada } from "codemirror-lang-ada";
 import { elixir } from "codemirror-lang-elixir";
 import { golfScript } from "codemirror-lang-golfscript";
 import { hcl } from "codemirror-lang-hcl";
@@ -16,6 +19,12 @@ import { pkl } from "codemirror-lang-pkl";
  * current @codemirror/language-data registry.
  */
 export const communityLanguageModes = [
+	{
+		name: "ada",
+		caption: "Ada",
+		extensions: ["ada", "adb", "ads"],
+		load: ada,
+	},
 	{
 		name: "bibtex",
 		caption: "BibTeX",
@@ -47,6 +56,12 @@ export const communityLanguageModes = [
 		load: dot,
 	},
 	{
+		name: "handlebars",
+		caption: "Handlebars",
+		extensions: ["hbs", "handlebars"],
+		load: () => new LanguageSupport(handlebarsLanguage),
+	},
+	{
 		name: "hcl",
 		caption: "HCL",
 		extensions: ["hcl", "tf", "tfvars"],
@@ -63,6 +78,12 @@ export const communityLanguageModes = [
 		caption: "Janet",
 		extensions: ["janet"],
 		load: janet,
+	},
+	{
+		name: "nix",
+		caption: "Nix",
+		extensions: ["nix"],
+		load: nix,
 	},
 	{
 		name: "pkl",

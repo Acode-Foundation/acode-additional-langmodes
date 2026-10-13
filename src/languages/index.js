@@ -2,6 +2,7 @@ import { asciidocMode } from "./asciidoc";
 import { assemblyMode } from "./assembly";
 import { autoHotkeyMode } from "./autohotkey";
 import { communityLanguageModes } from "./community";
+import { enhancedLanguageModes } from "./community/enhanced";
 import { gitignoreMode } from "./gitignore";
 import { zigMode } from "./zig";
 import { jsoncMode } from "./jsonc";
@@ -13,6 +14,7 @@ import { gitattributesMode } from "./gitattributes";
 import { gleamMode } from "./gleam";
 import { gitCommitMsgMode } from "./gitcommitmsg";
 import { makefileMode } from "./makefile";
+import { mustacheMode } from "./mustache";
 import { solidityMode } from "./solidity";
 
 /**
@@ -36,4 +38,6 @@ export const languageModes = [
 	gitCommitMsgMode,
 	makefileMode,
 	solidityMode,
+	mustacheMode,
+	...enhancedLanguageModes,
 ];
