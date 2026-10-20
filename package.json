@@ -1,6 +1,6 @@
 {
   "name": "acode-additional-langmodes",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Additional CodeMirror language modes for Acode",
   "main": "src/main.js",
   "repository": "",

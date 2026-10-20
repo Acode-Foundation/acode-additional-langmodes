@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.1
+
+- Added a Lezer grammar (`.grammar`) mode with a full Lezer parser,
+  highlighting, indentation, folding, and context-aware completions.
+
 ## v1.2.0
 
 - Added Lezer-based C, Clojure, Kotlin, LaTeX, Lua, and Swift modes, used by
