@@ -1,0 +1,143 @@
+# top rule and skip
+
+@top Program { statement* }
+@skip { space | Comment }
+
+==>
+
+Grammar(RuleDeclaration("@top",RuleName(NodeName),Body("{",Repeat(RuleName(HiddenName),"*"),"}")),SkipDeclaration("@skip",Body("{",Choice(RuleName(HiddenName),"|",RuleName(NodeName)),"}")))
+
+# node and hidden rule names
+
+Expression { atom | Call }
+atom { Number }
+
+==>
+
+Grammar(RuleDeclaration(RuleName(NodeName),Body("{",Choice(RuleName(HiddenName),"|",RuleName(NodeName)),"}")),RuleDeclaration(RuleName(HiddenName),Body("{",RuleName(NodeName),"}")))
+
+# props, params and calls
+
+commaSep<content> { content ("," content)* }
+Args[@name=Arguments, group=List] { "(" commaSep<Expr> ")" }
+
+==>
+
+Grammar(RuleDeclaration(RuleName(HiddenName),ParamList("<",ParamName(HiddenName),">"),Body("{",Sequence(RuleName(HiddenName),Repeat(ParenExpression("(",Sequence(Literal("\"","\""),RuleName(HiddenName)),")"),"*")),"}")),RuleDeclaration(RuleName(NodeName),Props("[",Prop(AtName,"=",PropValue(NodeName)),",",Prop(PropName(HiddenName),"=",PropValue(NodeName)),"]"),Body("{",Sequence(Literal("\"","\""),Call(RuleName(HiddenName),ArgList("<",RuleName(NodeName),">")),Literal("\"","\"")),"}")))
+
+# quantifiers and markers
+
+Binary { expr !times "*" expr | expr ~amb Op? x+ y* }
+
+==>
+
+Grammar(RuleDeclaration(RuleName(NodeName),Body("{",Choice(Sequence(RuleName(HiddenName),PrecedenceMarker("!",PrecedenceName(HiddenName)),Literal("\"","\""),RuleName(HiddenName)),"|",Sequence(RuleName(HiddenName),AmbiguityMarker("~",Name(HiddenName)),Optional(RuleName(NodeName),"?"),Repeat1(RuleName(HiddenName),"+"),Repeat(RuleName(HiddenName),"*"))),"}")))
+
+# choice and inline rules
+
+value { True { "true" } | [@name=Null] { "null" } | () }
+
+==>
+
+Grammar(RuleDeclaration(RuleName(HiddenName),Body("{",Choice(InlineRule(RuleName(NodeName),Body("{",Literal("\"","\""),"}")),"|",InlineRule(Props("[",Prop(AtName,"=",PropValue(NodeName)),"]"),Body("{",Literal("\"","\""),"}")),"|",ParenExpression("(",")")),"}")))
+
+# specialize and extend
+
+kw<term> { @specialize[@name={term}]<identifier, term> }
+op { @extend<Op, "in"> }
+
+==>
+
+Grammar(RuleDeclaration(RuleName(HiddenName),ParamList("<",ParamName(HiddenName),">"),Body("{",Specialization("@specialize",Props("[",Prop(AtName,"=",PropEscape("{",RuleName(HiddenName),"}")),"]"),ArgList("<",RuleName(HiddenName),",",RuleName(HiddenName),">")),"}")),RuleDeclaration(RuleName(HiddenName),Body("{",Specialization("@extend",ArgList("<",RuleName(NodeName),",",Literal("\"","\""),">")),"}")))
+
+# precedence declaration
+
+@precedence { member, times @left, else @right, cut @cut }
+
+==>
+
+Grammar(PrecedenceDeclaration("@precedence",PrecedenceBody("{",Precedence(PrecedenceName(HiddenName)),",",Precedence(PrecedenceName(HiddenName),"@left"),",",Precedence(PrecedenceName(HiddenName),"@right"),",",Precedence(PrecedenceName(HiddenName),"@cut"),"}")))
+
+# tokens block
+
+@tokens {
+  space { @whitespace+ }
+  Number { @digit+ ("." @digit*)? }
+  String { '"' (!["\\] | "\\" _)* '"' }
+  @precedence { Number, "." }
+  @conflict { Number, "-" }
+  "(" ")" "if"[@name=If]
+}
+
+==>
+
+Grammar(TokensDeclaration("@tokens",TokensBody("{",TokenDeclaration(RuleName(HiddenName),Body("{",Repeat1(CharClass("@whitespace"),"+"),"}")),TokenDeclaration(RuleName(NodeName),Body("{",Sequence(Repeat1(CharClass("@digit"),"+"),Optional(ParenExpression("(",Sequence(Literal("\"","\""),Repeat(CharClass("@digit"),"*")),")"),"?")),"}")),TokenDeclaration(RuleName(NodeName),Body("{",Sequence(Literal("'","'"),Repeat(ParenExpression("(",Choice(InvertedCharSet("![",Escape,"]"),"|",Sequence(Literal("\"",Escape,"\""),AnyChar)),")"),"*"),Literal("'","'")),"}")),TokenPrecedenceDeclaration("@precedence",PrecedenceBody("{",RuleName(NodeName),",",Literal("\"","\""),"}")),TokenConflictDeclaration("@conflict",ConflictBody("{",RuleName(NodeName),",",Literal("\"","\""),"}")),LiteralTokenDeclaration(Literal("\"","\"")),LiteralTokenDeclaration(Literal("\"","\"")),LiteralTokenDeclaration(Literal("\"","\""),Props("[",Prop(AtName,"=",PropValue(NodeName)),"]")),"}")))
+
+# escapes in literals and char sets
+
+@tokens { t { "\n\u{1F600}" $[a-z\]] ![\n] } }
+
+==>
+
+Grammar(TokensDeclaration("@tokens",TokensBody("{",TokenDeclaration(RuleName(HiddenName),Body("{",Sequence(Literal("\"",Escape,Escape,"\""),CharSet("$[",Escape,"]"),InvertedCharSet("![",Escape,"]")),"}")),"}")))
+
+# local tokens
+
+@local tokens {
+  stringEnd { '"' }
+  @else stringContent
+}
+
+==>
+
+Grammar(LocalTokensDeclaration("@local",tokens,TokensBody("{",TokenDeclaration(RuleName(HiddenName),Body("{",Literal("'","'"),"}")),ElseToken("@else",RuleName(HiddenName)),"}")))
+
+# external declarations
+
+@external tokens insertSemi from "./tokens" { semi, @conflict { a, b } }
+@external prop closedBy as close from "./props"
+@external propSource highlighting from "./highlight"
+@external specialize { Identifier } spec from "./tokens" { Keyword[@name=K] }
+@external extend { Identifier } ext from "./tokens" { Contextual }
+
+==>
+
+Grammar(ExternalTokensDeclaration("@external",tokens,Name(HiddenName),from,Literal("\"","\""),TokensBody("{",ExternalToken(RuleName(HiddenName)),",",ExternalConflictDeclaration("@conflict",ConflictBody("{",RuleName(HiddenName),",",RuleName(HiddenName),"}")),"}")),ExternalPropDeclaration("@external",prop,Name(HiddenName),as,Name(HiddenName),from,Literal("\"","\"")),ExternalPropSourceDeclaration("@external",propSource,Name(HiddenName),from,Literal("\"","\"")),ExternalSpecializeDeclaration("@external",specialize,Body("{",RuleName(NodeName),"}"),Name(HiddenName),from,Literal("\"","\""),TokensBody("{",ExternalToken(RuleName(NodeName),Props("[",Prop(AtName,"=",PropValue(NodeName)),"]")),"}")),ExternalSpecializeDeclaration("@external",extend,Body("{",RuleName(NodeName),"}"),Name(HiddenName),from,Literal("\"","\""),TokensBody("{",ExternalToken(RuleName(NodeName)),"}")))
+
+# context, dialects and detectDelim
+
+@context tracker from "./context"
+@dialects { jsx, ts }
+@detectDelim
+
+==>
+
+Grammar(ContextDeclaration("@context",Name(HiddenName),from,Literal("\"","\"")),DialectsDeclaration("@dialects",DialectsBody("{",Name(HiddenName),",",Name(HiddenName),"}")),DetectDelimDeclaration("@detectDelim"))
+
+# scoped skip
+
+@skip {} {
+  @top Doc { content }
+  String { '"' char* '"' }
+}
+
+==>
+
+Grammar(SkipDeclaration("@skip",Body("{","}"),SkipBody("{",RuleDeclaration("@top",RuleName(NodeName),Body("{",RuleName(HiddenName),"}")),RuleDeclaration(RuleName(NodeName),Body("{",Sequence(Literal("'","'"),Repeat(RuleName(HiddenName),"*"),Literal("'","'")),"}")),"}")))
+
+# std char classes and any char
+
+t { std.digit _ _rest @eof }
+
+==>
+
+Grammar(RuleDeclaration(RuleName(HiddenName),Body("{",Sequence(ScopedName(RuleName(HiddenName),".",RuleName(HiddenName)),AnyChar,RuleName(HiddenName),CharClass("@eof")),"}")))
+
+# comments
+
+// line
+/* block */ A { b }
+
+==>
+
+Grammar(LineComment,BlockComment,RuleDeclaration(RuleName(NodeName),Body("{",RuleName(HiddenName),"}")))

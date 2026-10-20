@@ -7,6 +7,7 @@ import { gitignoreMode } from "./gitignore";
 import { zigMode } from "./zig";
 import { jsoncMode } from "./jsonc";
 import { jsonlMode } from "./jsonl";
+import { lezerMode } from "./lezer";
 import { yamlMode } from "./yaml";
 
 import { ejsMode } from "./ejs"
@@ -39,5 +40,6 @@ export const languageModes = [
 	makefileMode,
 	solidityMode,
 	mustacheMode,
+	lezerMode,
 	...enhancedLanguageModes,
 ];

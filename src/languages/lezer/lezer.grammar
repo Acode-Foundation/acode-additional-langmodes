@@ -1,0 +1,251 @@
+// Lezer grammar for Lezer grammar files (.grammar).
+//
+// Follows the syntax accepted by @lezer/generator (see its hand-written
+// grammar-file parser) and the upstream lezer-grammar package:
+// https://lezer.codemirror.net/docs/guide/
+// https://code.haverbeke.berlin/lezer/lezer-grammar
+
+@top Grammar { declaration* }
+
+@skip { whitespace | LineComment | BlockComment }
+
+@precedence {
+  call
+  scoped
+  inline
+  repeat
+}
+
+declaration {
+  RuleDeclaration |
+  PrecedenceDeclaration |
+  TokensDeclaration |
+  LocalTokensDeclaration |
+  ExternalTokensDeclaration |
+  ExternalPropDeclaration |
+  ExternalPropSourceDeclaration |
+  ExternalSpecializeDeclaration |
+  ContextDeclaration |
+  DialectsDeclaration |
+  SkipDeclaration |
+  DetectDelimDeclaration
+}
+
+RuleDeclaration { at<"@top">? RuleName Props? ParamList? Body }
+
+PrecedenceDeclaration {
+  at<"@precedence"> PrecedenceBody {
+    "{" (Precedence { PrecedenceName associativity? } ","?)* "}"
+  }
+}
+
+associativity { at<"@left"> | at<"@right"> | at<"@cut"> }
+
+TokensDeclaration {
+  at<"@tokens"> TokensBody {
+    "{" (
+      TokenPrecedenceDeclaration |
+      TokenConflictDeclaration |
+      LiteralTokenDeclaration |
+      TokenDeclaration
+    )* "}"
+  }
+}
+
+LocalTokensDeclaration {
+  at<"@local"> kw<"tokens"> TokensBody {
+    "{" (
+      TokenPrecedenceDeclaration |
+      TokenDeclaration |
+      ElseToken { at<"@else"> RuleName Props? }
+    )* "}"
+  }
+}
+
+TokenDeclaration { RuleName Props? ParamList? Body }
+
+LiteralTokenDeclaration { Literal Props? }
+
+TokenPrecedenceDeclaration {
+  at<"@precedence"> PrecedenceBody { "{" (tokenReference ","?)* "}" }
+}
+
+TokenConflictDeclaration {
+  at<"@conflict"> ConflictBody { "{" (tokenReference ","?)* "}" }
+}
+
+tokenReference { Literal | nameExpression }
+
+ExternalTokensDeclaration {
+  at<"@external"> kw<"tokens"> Name kw<"from"> Literal externalTokenSet
+}
+
+ExternalPropDeclaration {
+  at<"@external"> kw<"prop"> Name (kw<"as"> Name)? kw<"from"> Literal
+}
+
+ExternalPropSourceDeclaration {
+  at<"@external"> kw<"propSource"> Name kw<"from"> Literal
+}
+
+ExternalSpecializeDeclaration {
+  at<"@external"> (kw<"extend"> | kw<"specialize">) Body Name kw<"from"> Literal externalTokenSet
+}
+
+externalTokenSet[@name=TokensBody] {
+  "{" ((ExternalToken { RuleName Props? } | ExternalConflictDeclaration) ","?)* "}"
+}
+
+ExternalConflictDeclaration {
+  at<"@conflict"> ConflictBody { "{" (RuleName ","?)* "}" }
+}
+
+ContextDeclaration { at<"@context"> Name kw<"from"> Literal }
+
+DialectsDeclaration { at<"@dialects"> DialectsBody { "{" (Name ","?)* "}" } }
+
+SkipDeclaration {
+  at<"@skip"> Body SkipBody { "{" RuleDeclaration* "}" }?
+}
+
+DetectDelimDeclaration { at<"@detectDelim"> }
+
+ParamList { "<" (ParamName ("," ParamName)*)? ">" }
+
+Body { "{" expression? "}" }
+
+Props { "[" (Prop ("," Prop)* ","?)? "]" }
+
+Prop { (AtName | PropName) ("=" propValue*)? }
+
+propValue { PropValue | Literal | "." | PropEscape { "{" RuleName "}" } }
+
+expression {
+  sequenceExpression |
+  Choice { sequenceExpression? ("|" sequenceExpression?)+ }
+}
+
+sequenceExpression {
+  atomExpression |
+  Sequence {
+    marker (atomExpression | marker)* |
+    atomExpression (atomExpression | marker)+
+  }
+}
+
+atomExpression {
+  Literal |
+  CharSet |
+  InvertedCharSet |
+  AnyChar |
+  CharClass |
+  nameExpression |
+  Optional { atomExpression !repeat "?" } |
+  Repeat { atomExpression !repeat "*" } |
+  Repeat1 { atomExpression !repeat "+" } |
+  InlineRule { (RuleName !inline Props? | Props) Body } |
+  ParenExpression { "(" expression? ")" } |
+  Specialization { (at<"@specialize"> | at<"@extend">) Props? ArgList }
+}
+
+nameExpression {
+  RuleName |
+  ScopedName |
+  Call { (RuleName | ScopedName) !call ArgList }
+}
+
+// `std.digit` style references (older char class syntax).
+ScopedName { RuleName !scoped "." RuleName }
+
+CharClass {
+  at<"@asciiLetter"> |
+  at<"@asciiLowercase"> |
+  at<"@asciiUppercase"> |
+  at<"@digit"> |
+  at<"@whitespace"> |
+  at<"@eof">
+}
+
+marker {
+  PrecedenceMarker { "!" PrecedenceName } |
+  AmbiguityMarker { "~" Name }
+}
+
+ArgList { "<" (expression ("," expression)*)? ">" }
+
+RuleName { name }
+PrecedenceName { name }
+ParamName { name }
+PropName { name }
+PropValue { name }
+Name { name }
+
+// Rule names starting with an uppercase letter (or another character that
+// has no lowercase form) become nodes in the tree; others are hidden.
+name { NodeName | HiddenName }
+
+@skip {} {
+  Literal {
+    '"' (doubleQuotedContent | Escape)* '"' |
+    "'" (singleQuotedContent | Escape)* "'"
+  }
+
+  CharSet { "$[" (charSetContent | Escape)* "]" }
+
+  InvertedCharSet { "![" (charSetContent | Escape)* "]" }
+}
+
+AnyChar { @specialize<HiddenName, "_"> }
+
+kw<value> { @specialize[@name={value}]<keyword, value> }
+
+at<value> { @specialize[@name={value}]<AtName, value> }
+
+@tokens {
+  whitespace { @whitespace+ }
+
+  LineComment { "//" ![\n]* }
+
+  BlockComment { "/*" blockCommentRest }
+
+  blockCommentRest { ![*] blockCommentRest | "*" blockCommentAfterStar | @eof }
+
+  blockCommentAfterStar { "/" | "*" blockCommentAfterStar | ![/*] blockCommentRest | @eof }
+
+  wordChar { @asciiLetter | @digit | $[\-_\u{a1}-\u{10ffff}] }
+
+  NodeName { $[A-Z0-9\-\u{a1}-\u{10ffff}] wordChar* }
+
+  HiddenName { $[a-z_] wordChar* }
+
+  keyword { $[a-z] wordChar* }
+
+  @precedence { whitespace, HiddenName, NodeName }
+
+  AtName { "@" wordChar+ }
+
+  hex { @digit | $[a-fA-F] }
+
+  Escape {
+    "\\" (
+      "u{" hex+ "}" |
+      "u" hex hex hex hex |
+      "x" hex hex |
+      _
+    )
+  }
+
+  doubleQuotedContent { ![\\\n"]+ }
+
+  singleQuotedContent { ![\\\n']+ }
+
+  charSetContent { ![\\\]\n]+ }
+
+  '"' "'" "$[" "!["
+
+  "{" "}" "(" ")" "[" "]" "<" ">"
+
+  "=" "." "," "|" "!" "~" "*" "+" "?"
+}
+
+@detectDelim

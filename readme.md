@@ -33,6 +33,8 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 - Handlebars (`.hbs`, `.handlebars`)
 - Mustache (`.mustache`)
 - Nix (`.nix`)
+- Lezer grammar (`.grammar`), with a full Lezer parser, highlighting, folding,
+  indentation, and context-aware completion of directives, props, and rule names
 
 ### Enhanced replacements for legacy modes
 

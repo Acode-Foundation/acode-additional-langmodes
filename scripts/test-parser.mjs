@@ -1347,3 +1347,174 @@ try {
 } finally {
 	fs.rmSync(solidityBehaviorBundle, { force: true });
 }
+
+const { parser: lezerParser } = await bundledRequire(
+	"src/languages/lezer/parser.js",
+	"acode-lezer-parser-test.cjs",
+);
+
+const lezerFixturePath = "src/languages/lezer/test.txt";
+const lezerTreeTests = fileTests(fs.readFileSync(lezerFixturePath, "utf8"), lezerFixturePath);
+for (const test of lezerTreeTests) test.run(lezerParser);
+console.log(`Validated ${lezerTreeTests.length} Lezer grammar parser fixtures.`);
+
+// Every grammar the generator accepts should parse without error nodes. Use
+// the repo's own grammars plus any that installed @lezer packages ship.
+function findGrammarSources(dir, files = []) {
+	if (!fs.existsSync(dir)) return files;
+	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+		const fullPath = path.join(dir, entry.name);
+		if (entry.isDirectory()) findGrammarSources(fullPath, files);
+		else if (entry.isFile() && entry.name.endsWith(".grammar")) files.push(fullPath);
+	}
+	return files;
+}
+
+const realGrammarFiles = [
+	...findGrammarSources("src/languages"),
+	...fs
+		.readdirSync("node_modules/@lezer")
+		.flatMap((pkg) => findGrammarSources(path.join("node_modules/@lezer", pkg, "src"))),
+];
+for (const file of realGrammarFiles) {
+	const source = fs.readFileSync(file, "utf8");
+	const tree = lezerParser.parse(source);
+	let errorAt = -1;
+	tree.iterate({
+		enter(node) {
+			if (errorAt < 0 && node.type.isError) errorAt = node.from;
+		},
+	});
+	assert.equal(errorAt, -1, `${file} produced a Lezer grammar parse error at ${errorAt}`);
+}
+console.log(`Parsed ${realGrammarFiles.length} real-world grammar files without errors.`);
+
+const lezerBehaviorBundle = path.join(os.tmpdir(), "acode-lezer-behavior-test-bundle.mjs");
+const lezerBehaviorSource = String.raw`
+import assert from "node:assert/strict";
+import { CompletionContext } from "@codemirror/autocomplete";
+import { EditorState } from "@codemirror/state";
+import { foldable, getIndentation, indentUnit, syntaxTree } from "@codemirror/language";
+import { classHighlighter, highlightTree } from "@lezer/highlight";
+import { lezer, lezerLanguage } from "./src/languages/lezer/index.js";
+
+const source = [
+  "// Example grammar",
+  "@top Program { expression* }",
+  "@skip { space | Comment }",
+  "@precedence { times @left, plus @left }",
+  "expression { Number | Binary | kw<\"if\"> }",
+  "Binary { expression !times \"*\" expression }",
+  "kw<term> { @specialize[@name={term}]<identifier, term> }",
+  "@tokens {",
+  "  space { @whitespace+ }",
+  "  Number { @digit+ }",
+  "  identifier { $[a-z\\n]+ }",
+  "  Comment { \"/*\" _* \"*/\" }",
+  "  newline { \"\\n\" }",
+  "}",
+  "",
+].join("\n");
+
+const tree = lezerLanguage.parser.parse(source);
+const errors = [];
+tree.iterate({ enter(node) { if (node.type.isError) errors.push(node.from); } });
+assert.equal(errors.length, 0, "Lezer fixture produced parse errors");
+
+const spans = [];
+highlightTree(tree, classHighlighter, (from, to, cls) => {
+  spans.push({ text: source.slice(from, to), cls });
+});
+function isHighlighted(text, tokenClass) {
+  return spans.some((span) => span.text === text && span.cls.includes(tokenClass));
+}
+assert(isHighlighted("// Example grammar", "tok-comment"));
+assert(isHighlighted("@top", "tok-keyword"));
+assert(isHighlighted("@tokens", "tok-keyword"));
+assert(isHighlighted("Program", "tok-typeName"));
+assert(isHighlighted("Number", "tok-typeName"));
+assert(isHighlighted("expression", "tok-definition"));
+assert(isHighlighted("kw", "tok-variableName"));
+assert(isHighlighted('"*"', "tok-string"));
+assert(isHighlighted("\\n", "tok-string2"));
+assert(isHighlighted("$[a-z\\n]", "tok-string2"));
+assert(isHighlighted("@whitespace", "tok-atom"));
+assert(isHighlighted("_", "tok-atom"));
+assert(isHighlighted("times", "tok-labelName"));
+assert(isHighlighted("@name", "tok-propertyName"));
+assert(isHighlighted('"', "tok-string"));
+assert(!spans.some((span) => span.text === "]" && span.cls.includes("tok-squareBracket") && span.cls.includes("tok-string2")));
+
+const indentSource = "@tokens {\n  Rule {\n    a\n  }\n}\n";
+const indentState = EditorState.create({
+  doc: indentSource,
+  extensions: [lezer(), indentUnit.of("  ")],
+});
+syntaxTree(indentState);
+assert.equal(getIndentation(indentState, indentState.doc.line(2).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(3).from), 4);
+assert.equal(getIndentation(indentState, indentState.doc.line(4).from), 2);
+assert.equal(getIndentation(indentState, indentState.doc.line(5).from), 0);
+assert(foldable(indentState, indentState.doc.line(1).from, indentState.doc.line(1).to));
+
+function complete(doc, pos = doc.length) {
+  const state = EditorState.create({ doc, extensions: [lezer()] });
+  syntaxTree(state);
+  const sourceFn = state.languageDataAt("autocomplete", pos)[0];
+  const result = sourceFn(new CompletionContext(state, pos, true));
+  return result ? result.options.map((option) => option.label) : [];
+}
+
+const topLabels = complete("@");
+assert(topLabels.includes("@top"));
+assert(topLabels.includes("@external tokens"));
+assert(!topLabels.includes("@specialize"));
+
+const exprLabels = complete("@top A { @ }", 10);
+assert(exprLabels.includes("@specialize"));
+assert(exprLabels.includes("@digit"));
+
+const tokenLabels = complete("@tokens { @ }", 11);
+assert(tokenLabels.includes("@precedence"));
+assert(tokenLabels.includes("@conflict"));
+assert(!tokenLabels.includes("@top"));
+
+const propLabels = complete("A[@] { b }", 3);
+assert(propLabels.includes("@name"));
+assert(propLabels.includes("@dynamicPrecedence"));
+
+const nameLabels = complete("@top Program { ex }\nexpression { Number }\n@tokens { Number { @digit+ } }\nlist<item> { item }", 17);
+assert(nameLabels.includes("expression"));
+assert(nameLabels.includes("Number"));
+assert(nameLabels.includes("list"));
+
+const paramLabels = complete("list<item> { it }", 15);
+assert(paramLabels.includes("item"));
+
+const precLabels = complete("@precedence { times @left }\nA { b !t }", 36);
+assert.deepEqual(precLabels, ["times"]);
+
+assert.deepEqual(complete('A { "@" }', 6), []);
+
+console.log("Validated Lezer grammar parsing, highlighting, indentation, folding, and completion fixtures.");
+`;
+
+await build({
+	stdin: {
+		contents: lezerBehaviorSource,
+		resolveDir: process.cwd(),
+		sourcefile: "lezer-behavior-test.mjs",
+		loader: "js",
+	},
+	bundle: true,
+	format: "esm",
+	platform: "node",
+	outfile: lezerBehaviorBundle,
+	logLevel: "silent",
+});
+
+try {
+	await import(pathToFileURL(lezerBehaviorBundle).href + `?t=${Date.now()}`);
+} finally {
+	fs.rmSync(lezerBehaviorBundle, { force: true });
+}

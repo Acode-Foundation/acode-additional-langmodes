@@ -91,6 +91,7 @@ async function testHostRuntime() {
 		"makefile",
 		"solidity",
 		"mustache",
+		"lezer",
 		"c-enhanced",
 		"clojure-enhanced",
 		"kotlin-enhanced",
@@ -120,6 +121,8 @@ async function testHostRuntime() {
 	assert.equal(modes.get("kotlin-enhanced").caption, "Kotlin (Enhanced)");
 	assert(modes.get("latex-enhanced").extensions.includes("tex"));
 	assert(modes.get("handlebars").extensions.includes("hbs"));
+	assert(modes.get("lezer").extensions.includes("grammar"));
+	assert.equal(modes.get("lezer").caption, "Lezer Grammar");
 
 	const samples = {
 		asciidoc: `= Project Notes
@@ -238,6 +241,16 @@ end Hello;
 		handlebars: "<ul>{{#each items}}<li>{{this.name}}</li>{{/each}}</ul>\n",
 		nix: '{ pkgs ? import <nixpkgs> {} }:\npkgs.mkShell { buildInputs = [ pkgs.hello ]; }\n',
 		mustache: "<h1>{{title}}</h1>\n{{#items}}<li>{{name}}</li>{{/items}}\n{{! comment }}\n",
+		lezer: `@top Program { expression* }
+@skip { space }
+expression { Number | kw<"if"> }
+kw<term> { @specialize[@name={term}]<identifier, term> }
+@tokens {
+  space { @whitespace+ }
+  Number { @digit+ }
+  identifier { $[a-z]+ }
+}
+`,
 		"c-enhanced": '#include <stdio.h>\nint main(void) { printf("%d\\n", 1); return 0; }\n',
 		"clojure-enhanced": '(ns app.core)\n(defn greet [name] (str "Hello, " name))\n',
 		"kotlin-enhanced": `package app
@@ -284,7 +297,8 @@ func greet(_ user: User) -> String { "Hello, \\(user.name)" }
 			name === "assembly" ||
 			name === "yaml-enhanced" ||
 			name === "makefile" ||
-			name === "solidity"
+			name === "solidity" ||
+			name === "lezer"
 		) {
 			const nodeNames = new Set();
 			const errors = [];
@@ -309,6 +323,8 @@ func greet(_ user: User) -> String { "Hello, \\(user.name)" }
 									"Conditional",
 									"AutomaticVariable",
 								]
+							: name === "lezer"
+								? ["RuleDeclaration", "SkipDeclaration", "Call", "Specialization", "TokensDeclaration", "CharClass"]
 							: name === "solidity"
 								? [
 										"PragmaDirective",
