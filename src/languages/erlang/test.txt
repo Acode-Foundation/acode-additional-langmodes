@@ -1,0 +1,120 @@
+# module attribute and export
+-module(demo).
+-export([start/0, stop/1]).
+==>
+Program(Form(Attribute("-",AttributeName(CallName),Parenthesized("(",Atom,")"),EndDot)),Form(Attribute("-",AttributeName(CallName),Parenthesized("(",Bracketed("[",Atom,Operator,Integer,Punctuation,Atom,Operator,Integer,"]"),")"),EndDot)))
+
+# function with guard and clauses
+fact(0) -> 1;
+fact(N) when N > 0 -> N * fact(N - 1).
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",Integer,")"),"->",Integer),";",FunctionClause(FunctionName(CallName),Parenthesized("(",Variable,")"),When,Variable,Operator,Integer,"->",Variable,Operator,CallName,Parenthesized("(",Variable,Operator("-"),Integer,")")),EndDot)))
+
+# case expression
+f(X) ->
+    case X of
+        {ok, V} -> V;
+        _ -> error
+    end.
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",Variable,")"),"->",CaseExpression(Case,Variable,Of,ClauseList(Clause(Braced("{",Atom,Punctuation,Variable,"}"),"->",Variable),";",Clause(Variable,"->",Atom)),End)),EndDot)))
+
+# try catch after
+f() ->
+    try g()
+    catch
+        error:badarg -> bad;
+        Class:Reason:Stack -> {Class, Reason, Stack}
+    after
+        cleanup()
+    end.
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",TryExpression(Try,CallName,Parenthesized("(",")"),Catch,TryClauseList(TryClause(Atom,Punctuation,Atom,"->",Atom),";",TryClause(Variable,Punctuation,Variable,Punctuation,Variable,"->",Braced("{",Variable,Punctuation,Variable,Punctuation,Variable,"}"))),After,CallName,Parenthesized("(",")"),End)),EndDot)))
+
+# receive with after
+loop() ->
+    receive
+        stop -> ok;
+        Msg -> handle(Msg), loop()
+    after 1000 ->
+        timeout
+    end.
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",ReceiveExpression(Receive,ClauseList(Clause(Atom,"->",Atom),";",Clause(Variable,"->",CallName,Parenthesized("(",Variable,")"),Punctuation,CallName,Parenthesized("(",")"))),After,Clause(Integer,"->",Atom),End)),EndDot)))
+
+# fun expression, named fun, fun type and fun reference
+-spec f(fun((integer()) -> ok)) -> fun().
+f(G) ->
+    A = fun(X) -> X end,
+    B = fun F(0) -> 0; F(N) -> F(N - 1) end,
+    C = fun lists:map/2,
+    {A, B, C, G}.
+==>
+Program(Form(Attribute("-",AttributeName(Atom),CallName,Parenthesized("(",FunType(Fun,Parenthesized("(",Parenthesized("(",CallName,Parenthesized("(",")"),")"),"->",Atom,")")),")"),"->",FunType(Fun,Parenthesized("(",")")),EndDot)),Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",Variable,")"),"->",Variable,Operator,FunExpression(Fun,FunClause(Parenthesized("(",Variable,")"),"->",Variable),End),Punctuation,Variable,Operator,FunExpression(Fun,FunClause(FunName(Variable),Parenthesized("(",Integer,")"),"->",Integer),";",FunClause(FunName(Variable),Parenthesized("(",Variable,")"),"->",Variable,Parenthesized("(",Variable,Operator("-"),Integer,")")),End),Punctuation,Variable,Operator,FunRef(Fun,Atom,Atom,Integer),Punctuation,Braced("{",Variable,Punctuation,Variable,Punctuation,Variable,Punctuation,Variable,"}")),EndDot)))
+
+# remote calls and macros
+f() ->
+    lists:map(fun g/1, ?MODULE:items()),
+    ?LOG("done ~p~n", [ok]).
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",ModuleName,Punctuation,CallName,Parenthesized("(",FunRef(Fun,Atom,Integer),Punctuation,Macro,Punctuation,CallName,Parenthesized("(",")"),")"),Punctuation,Macro,Parenthesized("(",String(FormatDirective,FormatDirective),Punctuation,Bracketed("[",Atom,"]"),")")),EndDot)))
+
+# records and maps
+f(S) ->
+    X = S#state.count,
+    Y = S#state{count = X + 1},
+    M = #{a => 1},
+    {Y, M, #state.count}.
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",Variable,")"),"->",Variable,Operator,Variable,Record(RecordName(Atom),FieldDot,RecordField(Atom)),Punctuation,Variable,Operator,Variable,Record(RecordName(Atom)),Braced("{",Atom,Operator,Variable,Operator,Integer,"}"),Punctuation,Variable,Operator,Operator,Braced("{",Atom,Operator,Integer,"}"),Punctuation,Braced("{",Variable,Punctuation,Variable,Punctuation,Record(RecordName(Atom),FieldDot,RecordField(Atom)),"}")),EndDot)))
+
+# strings, chars, escapes and format directives
+f() -> io:format("~p: ~10.2f~n", [X, $a, "q\"x"]).
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",ModuleName,Punctuation,CallName,Parenthesized("(",String(FormatDirective,FormatDirective,FormatDirective),Punctuation,Bracketed("[",Variable,Punctuation,Char,Punctuation,String(Escape),"]"),")")),EndDot)))
+
+# numbers
+f() -> [1, 16#FF, 1_000, 1.5e-3, $\n].
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",Bracketed("[",Integer,Punctuation,Integer,Punctuation,Integer,Punctuation,Float,Punctuation,Char,"]")),EndDot)))
+
+# binaries and comprehensions
+f(L) -> <<X:8, Rest/binary>> = B, [Y * 2 || Y <- L, Y > 1].
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",Variable,")"),"->",Binary("<<",Variable,Punctuation,Integer,Punctuation,Variable,Operator,Atom,">>"),Operator,Variable,Punctuation,Bracketed("[",Variable,Operator,Integer,Operator,Variable,Operator,Variable,Punctuation,Variable,Operator,Integer,"]")),EndDot)))
+
+# catch operator versus the try catch section
+f() ->
+    try X = catch g(), X of
+        _ -> catch h()
+    catch
+        _:_ -> Y = catch k(), Y
+    end.
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",TryExpression(Try,Variable,Operator,Catch,CallName,Parenthesized("(",")"),Punctuation,Variable,Of,TryClauseList(TryClause(Variable,"->",Catch,CallName,Parenthesized("(",")"))),Catch,TryClauseList(TryClause(Variable,Punctuation,Variable,"->",Variable,Operator,Catch,CallName,Parenthesized("(",")"),Punctuation,Variable)),End)),EndDot)))
+
+# maybe expression
+f() ->
+    maybe
+        {ok, A} ?= g(),
+        A
+    else
+        error -> failed
+    end.
+==>
+Program(Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",")"),"->",MaybeExpression(Maybe,Braced("{",Atom,Punctuation,Variable,"}"),Operator,CallName,Parenthesized("(",")"),Punctuation,Variable,Else,ClauseList(Clause(Atom,"->",Atom)),End)),EndDot)))
+
+# preprocessor attributes
+-ifdef(TEST).
+-define(DEBUG(X), io:format("~p~n", [X])).
+-else.
+-endif.
+==>
+Program(Form(Attribute("-",AttributeName(CallName),Parenthesized("(",Variable,")"),EndDot)),Form(Attribute("-",AttributeName(CallName),Parenthesized("(",Variable,Parenthesized("(",Variable,")"),Punctuation,ModuleName,Punctuation,CallName,Parenthesized("(",String(FormatDirective,FormatDirective),Punctuation,Bracketed("[",Variable,"]"),")"),")"),EndDot)),Form(Attribute("-",AttributeName(Else),EndDot)),Form(Attribute("-",AttributeName(Atom),EndDot)))
+
+# comments and shebang
+#!/usr/bin/env escript
+%% a comment
+main(_) -> ok. % trailing
+==>
+Program(Shebang,LineComment,Form(FunctionDeclaration(FunctionClause(FunctionName(CallName),Parenthesized("(",Variable,")"),"->",Atom),EndDot)),LineComment)
