@@ -9,6 +9,7 @@ import { jsoncMode } from "./jsonc";
 import { jsonlMode } from "./jsonl";
 import { lezerMode } from "./lezer";
 import { yamlMode } from "./yaml";
+import { erlangMode } from "./erlang";
 
 import { ejsMode } from "./ejs"
 import { gitattributesMode } from "./gitattributes";
@@ -32,6 +33,7 @@ export const languageModes = [
 	jsoncMode,
 	jsonlMode,
 	yamlMode,
+    erlangMode,
 	...communityLanguageModes,
   ejsMode,
   gitattributesMode,
