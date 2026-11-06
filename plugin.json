@@ -3,7 +3,7 @@
     "id": "acode.additional.langmodes",
     "name": "Additional Language Modes",
     "main": "main.js",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "repository": "https://github.com/Acode-Foundation/acode-additional-langmodes",
     "icon": "icon.png",
     "minVersionCode": 290,
@@ -33,7 +33,8 @@
         "handlebars",
         "mustache",
         "lezer",
-        "grammar"
+        "grammar",
+        "erlang"
     ],
     "price": 0,
     "permissions": [],

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.2
+
+- Added an Erlang mode (`.erl`, `.hrl`, `.escript`, `.app.src`) with a full
+  Lezer parser, highlighting, indentation, folding, keyword bracket matching,
+  and completions for keywords, BIFs, macros, attributes, and OTP modules.
+
 ## v1.2.1
 
 - Added a Lezer grammar (`.grammar`) mode with a full Lezer parser,
