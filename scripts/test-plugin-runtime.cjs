@@ -20,7 +20,7 @@ const unregistered = [];
 
 // Modes the mocked host already provides. Current Acode ships legacy modes
 // for the replacement languages; the "future" test clears them.
-const legacyReplacedModes = ["c", "clojure", "kotlin", "latex", "lua", "swift"];
+const legacyReplacedModes = ["c", "clojure", "erlang", "kotlin", "latex", "lua", "swift"];
 const hostModes = new Set(["yaml", ...legacyReplacedModes]);
 
 const editorLanguages = {
@@ -85,6 +85,7 @@ async function testHostRuntime() {
 		"svelte",
 		"wgsl",
 		"ejs",
+		"erlang-enhanced",
 		"gitattributes",
 		"gleam",
 		"gitcommitmsg",
@@ -117,6 +118,13 @@ async function testHostRuntime() {
 	assert(modes.get("makefile").extensions.includes("mk"));
 	assert(modes.get("makefile").extensions.includes("Makefile"));
 	assert(modes.get("solidity").extensions.includes("sol"));
+	assert.equal(modes.get("erlang-enhanced").caption, "Erlang (Enhanced)");
+	for (const extension of ["erl", "hrl", "escript", "app.src"]) {
+		assert(
+			modes.get("erlang-enhanced").extensions.includes(extension),
+			`erlang-enhanced should claim ${extension}`,
+		);
+	}
 	assert(modes.get("kotlin-enhanced").extensions.includes("kts"));
 	assert.equal(modes.get("kotlin-enhanced").caption, "Kotlin (Enhanced)");
 	assert(modes.get("latex-enhanced").extensions.includes("tex"));
@@ -182,6 +190,21 @@ jobs:
 		ejs: "<% if (user) { %>\n<h2><%= user.name %></h2>\n<% } %>",
 		gitattributes: "# comment\n*.txt text eol=lf\n",
 		gleam: "pub fn main() { Nil }\n",
+		"erlang-enhanced": `-module(counter).
+-behaviour(gen_server).
+-export([start_link/0, init/1, handle_call/3]).
+-record(state, {count = 0 :: non_neg_integer()}).
+
+start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+init([]) -> {ok, #state{}}.
+
+handle_call(inc, _From, State = #state{count = N}) ->
+    case N of
+        _ when N >= 10 -> {reply, {error, limit}, State};
+        _ -> {reply, ok, State#state{count = N + 1}}
+    end.
+`,
 		gitcommitmsg: `
 # Please enter the commit message for your changes. Lines starting
 # with '#' will be ignored, and an empty message aborts the commit.
@@ -297,6 +320,7 @@ func greet(_ user: User) -> String { "Hello, \\(user.name)" }
 			name === "assembly" ||
 			name === "yaml-enhanced" ||
 			name === "makefile" ||
+			name === "erlang-enhanced" ||
 			name === "solidity" ||
 			name === "lezer"
 		) {
@@ -310,7 +334,18 @@ func greet(_ user: User) -> String { "Hello, \\(user.name)" }
 			});
 			assert.equal(errors.length, 0, `${name} produced parse errors`);
 			const expectedNodes =
-				name === "asciidoc"
+				name === "erlang-enhanced"
+					? [
+							"Attribute",
+							"FunctionDeclaration",
+							"FunctionClause",
+							"CaseExpression",
+							"Clause",
+							"Record",
+							"ModuleName",
+							"Macro",
+						]
+					: name === "asciidoc"
 					? ["Heading1", "Heading2", "AttributeLine", "Xref", "ListingBlock", "ListItem"]
 					: name === "assembly"
 						? ["DirectiveName", "Label", "Instruction", "Register", "String"]
@@ -479,6 +514,7 @@ async function testReplacementsWithoutLegacyModes() {
 			assert(modes.get(name).load()?.language, `${name} did not return LanguageSupport`);
 		}
 		assert.equal(modes.get("kotlin").caption, "Kotlin");
+		assert.equal(modes.get("erlang").caption, "Erlang");
 		await unmountPlugin();
 		assert(unregistered.includes("kotlin"));
 	} finally {

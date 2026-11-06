@@ -1,0 +1,293 @@
+@top Program { Form* }
+
+@precedence {
+  attr,
+  head,
+  funref,
+  funexpr,
+  funclause,
+  record,
+  trycatch
+}
+
+Form { Attribute | FunctionDeclaration | TermForm }
+
+// -- Forms ------------------------------------------------------------------
+
+Attribute { "-" !attr AttributeName looseItem* EndDot }
+
+AttributeName { Atom | CallName | If | Else }
+
+FunctionDeclaration { functionPart (";" functionPart)* EndDot }
+
+// Macros can stand in for whole clauses: `?DEFINE_HANDLER(state).`
+functionPart { FunctionClause | MacroCall }
+MacroCall { Macro Parenthesized }
+
+FunctionClause {
+  (FunctionName | Macro !head) Parenthesized (When guardItem*)? "->" bodyItem*
+}
+
+// The name in a clause head, kept apart from the calls in guards and bodies.
+FunctionName { CallName !head }
+
+// A bare term, e.g. the `{erl_opts, []}.` forms of rebar.config and .app.src.
+TermForm { looseItem+ EndDot }
+
+EndDot { "." }
+
+// -- Items ------------------------------------------------------------------
+
+// `catch` is kept out of element so that `try ... catch` can end a try body
+// without ambiguity. Everywhere else it may appear as the old-style
+// `catch Expr` operator, hence bodyItem.
+bodyItem { element | Catch }
+looseItem { bodyItem | "->" | ";" | When }
+guardItem { element | ";" }
+headItem { element | ";" | When }
+
+element {
+  Atom |
+  CallName |
+  ModuleName |
+  QuotedAtom |
+  Variable |
+  Macro |
+  Integer |
+  Float |
+  Char |
+  String |
+  TripleString |
+  Sigil |
+  Boolean |
+  Reserved |
+  WordOperator |
+  Operator |
+  Punctuation |
+  Record |
+  Parenthesized |
+  Bracketed |
+  Braced |
+  Binary |
+  CaseExpression |
+  IfExpression |
+  ReceiveExpression |
+  TryExpression |
+  BeginExpression |
+  MaybeExpression |
+  FunExpression |
+  FunType |
+  FunRef
+}
+
+Parenthesized { "(" looseItem* ")" }
+Bracketed { "[" looseItem* "]" }
+Braced { "{" looseItem* "}" }
+Binary { "<<" looseItem* ">>" }
+
+// `#name`, `#name.field` and the `#` of map literals (`#{}`).
+Record { "#" !record RecordName (FieldDot RecordField)? }
+RecordName { Atom | QuotedAtom | Macro }
+RecordField { Atom | QuotedAtom }
+
+// -- Blocks -----------------------------------------------------------------
+
+Clause { headItem* "->" bodyItem* }
+ClauseList { Clause (";" Clause)* }
+
+// Inside a try body or a clause of its `of`/`catch` sections, a `catch` that
+// follows a complete expression starts the next section. It is the old-style
+// `catch Expr` operator only directly after another operator or a comma
+// (`X = catch f()`), or as the first token of a clause body.
+tryItem { element | (Operator | Punctuation) !trycatch Catch }
+
+// Clauses of the `of` and `catch` sections of a try expression.
+TryClause { headItem* "->" (Catch | element) tryItem* }
+TryClauseList { TryClause (";" TryClause)* }
+
+CaseExpression { Case bodyItem* Of ClauseList End }
+IfExpression { If ClauseList End }
+ReceiveExpression { Receive ClauseList? (After Clause)? End }
+TryExpression {
+  Try tryItem* (Of TryClauseList)? (Catch TryClauseList)? (After bodyItem*)? End
+}
+BeginExpression { Begin bodyItem* End }
+MaybeExpression { Maybe bodyItem* (Else ClauseList)? End }
+
+// A fun expression head is always `(Args) [when Guard] ->`, which keeps it
+// apart from the `fun((Args) -> Result)` type syntax.
+// Named funs repeat the name in every clause: `fun F(0) -> 1; F(N) -> ... end`.
+FunExpression { Fun FunClause (";" FunClause)* End }
+FunClause {
+  FunName? Parenthesized !funclause (When guardItem*)? "->" bodyItem*
+}
+FunName { Variable }
+FunType { Fun Parenthesized }
+FunRef { Fun !funref funRefPart (":" funRefPart)? "/" funRefArity }
+funRefPart { Atom !funref | Variable !funref | Macro !funref | QuotedAtom !funref }
+funRefArity { Integer | Variable | Macro }
+
+// -- Keywords ---------------------------------------------------------------
+
+After { @specialize<Atom, "after"> }
+Begin { @specialize<Atom, "begin"> }
+Case { @specialize<Atom, "case"> }
+Catch { @specialize<Atom, "catch"> }
+Else { @specialize<Atom, "else"> }
+End { @specialize<Atom, "end"> }
+Fun { @specialize<Atom, "fun"> }
+If { @specialize<Atom, "if"> }
+Of { @specialize<Atom, "of"> }
+Receive { @specialize<Atom, "receive"> }
+Try { @specialize<Atom, "try"> }
+When { @specialize<Atom, "when"> }
+
+// Reserved words that no current Erlang release uses.
+Reserved { @specialize<Atom, "cond"> | @specialize<Atom, "let"> }
+
+Boolean { @specialize<Atom, "true"> | @specialize<Atom, "false"> }
+
+WordOperator {
+  @specialize<Atom, "and"> | @specialize<Atom, "andalso"> |
+  @specialize<Atom, "band"> | @specialize<Atom, "bnot"> |
+  @specialize<Atom, "bor"> | @specialize<Atom, "bsl"> |
+  @specialize<Atom, "bsr"> | @specialize<Atom, "bxor"> |
+  @specialize<Atom, "div"> | @specialize<Atom, "not"> |
+  @specialize<Atom, "or"> | @specialize<Atom, "orelse"> |
+  @specialize<Atom, "rem"> | @specialize<Atom, "xor">
+}
+
+Operator { operator | "-" | "#" }
+Punctuation { "," | ":" }
+
+@external tokens erlangTokens from "./tokens.js" {
+  CallName,
+  ModuleName,
+  Maybe,
+  FieldDot
+}
+
+@skip { spaces | newline | LineComment | Shebang }
+
+@skip {} {
+  String { '"' (stringContent | Escape | FormatDirective | stringTilde)* '"' }
+  TripleString {
+    '"""' (tripleContent | tripleQuote | FormatDirective | stringTilde)* '"""'
+  }
+}
+
+@tokens {
+  spaces { $[ \t\u{b}\u{c}\u{a0}]+ }
+  newline { "\r"? "\n" }
+
+  LineComment { "%" ![\n\r]* }
+  Shebang { "#!" ![\n\r]* }
+
+  Atom {
+    $[a-z\u{df}-\u{f6}\u{f8}-\u{ff}]
+    $[a-zA-Z0-9_@\u{c0}-\u{d6}\u{d8}-\u{f6}\u{f8}-\u{ff}]*
+  }
+
+  QuotedAtom { "'" ("\\" _ | !['\\])* "'" }
+
+  Variable {
+    $[A-Z_\u{c0}-\u{d6}\u{d8}-\u{de}]
+    $[a-zA-Z0-9_@\u{c0}-\u{d6}\u{d8}-\u{f6}\u{f8}-\u{ff}]*
+  }
+
+  Macro {
+    "?" "?"?
+    ($[a-zA-Z_@\u{c0}-\u{d6}\u{d8}-\u{f6}\u{f8}-\u{ff}]
+     $[a-zA-Z0-9_@\u{c0}-\u{d6}\u{d8}-\u{f6}\u{f8}-\u{ff}]* |
+     "'" ("\\" _ | !['\\])* "'")
+  }
+
+  digits { @digit+ ("_" @digit+)* }
+
+  Integer { digits ("#" $[0-9a-zA-Z_]+)? }
+
+  Float { digits "." digits ($[eE] $[+\-]? digits)? }
+
+  Char {
+    "$" (
+      "\\" (
+        "x{" $[0-9a-fA-F]+ "}" |
+        "x" $[0-9a-fA-F] $[0-9a-fA-F] |
+        "^" _ |
+        $[0-7] $[0-7]? $[0-7]? |
+        _
+      ) |
+      ![\\\n\r]
+    )
+  }
+
+  // OTP 27 sigils: ~"...", ~b"...", ~S"...", ~(...), ~[...], and so on. The
+  // lowercase forms (and the bare ~"...") process escape sequences, while the
+  // uppercase forms (~S, ~B) are verbatim: a backslash is an ordinary
+  // character there, so `~S|raw\|` is complete.
+  Sigil { "~" ($[sb]? sigilEscaped | $[SB] sigilVerbatim) }
+
+  sigilEscaped {
+    '"""' (![\"] | '"' ![\"] | '""' ![\"])* '"""' |
+    '"' ("\\" _ | ![\"\\])* '"' |
+    "'" ("\\" _ | !['\\])* "'" |
+    "(" ("\\" _ | ![)\\])* ")" |
+    "[" ("\\" _ | ![\]\\])* "]" |
+    "{" ("\\" _ | ![}\\])* "}" |
+    "<" ("\\" _ | ![>\\])* ">" |
+    "/" ("\\" _ | ![/\\])* "/" |
+    "|" ("\\" _ | ![|\\])* "|" |
+    "`" ("\\" _ | ![`\\])* "`" |
+    "#" ("\\" _ | ![#\\])* "#"
+  }
+
+  sigilVerbatim {
+    '"""' (![\"] | '"' ![\"] | '""' ![\"])* '"""' |
+    '"' ![\"]* '"' |
+    "'" !['] * "'" |
+    "(" ![)]* ")" |
+    "[" ![\]]* "]" |
+    "{" ![}]* "}" |
+    "<" ![>]* ">" |
+    "/" ![/]* "/" |
+    "|" ![|]* "|" |
+    "`" ![`]* "`" |
+    "#" ![#]* "#"
+  }
+
+  stringContent { ![\"\\~]+ }
+  tripleContent { ![\"~]+ }
+  tripleQuote { '"' '"'? }
+  stringTilde { "~" }
+
+  Escape {
+    "\\" (
+      "x{" $[0-9a-fA-F]+ "}" |
+      "x" $[0-9a-fA-F] $[0-9a-fA-F]? |
+      "^" _ |
+      $[0-7] $[0-7]? $[0-7]? |
+      _
+    )
+  }
+
+  // io:format control sequences such as ~p, ~n, ~10.2f and ~ts.
+  FormatDirective { "~" $[\-+#0-9*.]* $[tl]* $[a-zA-Z~] }
+
+  operator {
+    "+" | "*" | "/" | "==" | "/=" | "=<" | "<" | ">=" | ">" |
+    "=:=" | "=/=" | "++" | "--" | "=" | "!" | "?=" |
+    "?" | "<-" | "<=" | "=>" | ":=" | "::" | "|" | "||" |
+    ".." | "..." | "&&" | "<:-" | "<:="
+  }
+
+  "(" ")" "[" "]" "{" "}" "<<" ">>" "->" ";" "-"
+
+  // When tokens overlap, the longer match must be listed first so that it
+  // replaces the shorter one (`1.5` is a Float, not an Integer and `.5`).
+  @precedence { Float, Integer }
+  @precedence { Macro, operator }
+  @precedence { Shebang, "#" }
+  @precedence { FormatDirective, stringTilde }
+}
+
+@detectDelim

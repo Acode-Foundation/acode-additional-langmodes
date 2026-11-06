@@ -11,6 +11,7 @@ import { lezerMode } from "./lezer";
 import { yamlMode } from "./yaml";
 
 import { ejsMode } from "./ejs"
+import { erlangMode } from "./erlang";
 import { gitattributesMode } from "./gitattributes";
 import { gleamMode } from "./gleam";
 import { gitCommitMsgMode } from "./gitcommitmsg";
@@ -34,6 +35,7 @@ export const languageModes = [
 	yamlMode,
 	...communityLanguageModes,
   ejsMode,
+	erlangMode,
   gitattributesMode,
   gleamMode,
 	gitCommitMsgMode,

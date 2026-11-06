@@ -40,7 +40,8 @@ Adds CodeMirror language support for languages that are not bundled with Acode.
 
 Current Acode highlights these languages with `@codemirror/legacy-modes`
 stream tokenizers (C uses the C++ grammar). The plugin provides Lezer-based
-community parsers and makes them the default for matching files.
+parsers (community packages, plus a first-party Erlang grammar) and makes them
+the default for matching files.
 
 While Acode still ships its own mode, the plugin registers as
 `<name>-enhanced` ("Kotlin (Enhanced)") so both stay in the mode picker. Once
@@ -49,6 +50,7 @@ Acode drops it, the plugin registers under the canonical name (`kotlin`,
 
 - C (`.c`, `.h`, `.ino`)
 - Clojure (`.clj`, `.cljs`, `.cljc`, `.cljx`, `.edn`)
+- Erlang (`.erl`, `.hrl`, `.escript`, `.app.src`)
 - Kotlin (`.kt`, `.kts`)
 - LaTeX (`.tex`, `.ltx`, `.sty`, `.cls`, `.latex`)
 - Lua (`.lua`)
