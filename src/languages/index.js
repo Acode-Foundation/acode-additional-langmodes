@@ -9,9 +9,9 @@ import { jsoncMode } from "./jsonc";
 import { jsonlMode } from "./jsonl";
 import { lezerMode } from "./lezer";
 import { yamlMode } from "./yaml";
-import { erlangMode } from "./erlang";
 
 import { ejsMode } from "./ejs"
+import { erlangMode } from "./erlang";
 import { gitattributesMode } from "./gitattributes";
 import { gleamMode } from "./gleam";
 import { gitCommitMsgMode } from "./gitcommitmsg";
@@ -33,9 +33,9 @@ export const languageModes = [
 	jsoncMode,
 	jsonlMode,
 	yamlMode,
-    erlangMode,
 	...communityLanguageModes,
   ejsMode,
+	erlangMode,
   gitattributesMode,
   gleamMode,
 	gitCommitMsgMode,

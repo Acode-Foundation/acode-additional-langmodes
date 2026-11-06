@@ -50,7 +50,7 @@ Acode drops it, the plugin registers under the canonical name (`kotlin`,
 
 - C (`.c`, `.h`, `.ino`)
 - Clojure (`.clj`, `.cljs`, `.cljc`, `.cljx`, `.edn`)
-- Erlang (`.erl`, `.hrl`, `.escript`, `.app.src`),
+- Erlang (`.erl`, `.hrl`, `.escript`, `.app.src`)
 - Kotlin (`.kt`, `.kts`)
 - LaTeX (`.tex`, `.ltx`, `.sty`, `.cls`, `.latex`)
 - Lua (`.lua`)

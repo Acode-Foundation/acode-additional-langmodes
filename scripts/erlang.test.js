@@ -174,12 +174,31 @@ console.log("Validated a realistic Erlang module.");
 // -- 3. Context-sensitive constructs ----------------------------------------
 
 {
-	// `maybe` is a keyword only when it ends its line (maybe_expr feature).
+	// `maybe` is a keyword only when an expression follows it.
 	let tree = parseClean("f() -> {maybe, maybe(1), [maybe]}.\n", "maybe as atom");
 	assert.equal(count(tree, "MaybeExpression"), 0);
 	assert.equal(count(tree, "Maybe"), 0);
-	tree = parseClean("f() ->\n    maybe % comment\n        {ok, A} ?= g(),\n        A\n    end.\n");
-	assert.equal(count(tree, "MaybeExpression"), 1);
+	for (const source of [
+		"-export([maybe/1]).\n",
+		"f() -> maybe.\n",
+		"f() -> [yes,\n    maybe\n].\n",
+		"f(X) -> case X of maybe -> 1; maybe when true -> 2 end.\n",
+		"f(L) -> [X || maybe <- L, maybe =:= X, maybe:g()].\n",
+		"f() -> try maybe catch _ -> ok end.\n",
+	]) {
+		tree = parseClean(source, `maybe as atom: ${source}`);
+		assert.equal(count(tree, "Maybe"), 0, `maybe as atom: ${source}`);
+	}
+	for (const source of [
+		"f() ->\n    maybe % comment\n        {ok, A} ?= g(),\n        A\n    end.\n",
+		"f() -> maybe {ok, A} ?= g(), A end.\n",
+		"f() -> maybe ok ?= g(), ?MODULE:h() end.\n",
+		"f() -> maybe X = g(), X else _ -> error end.\n",
+		"f() -> maybe\n    % comment\n    <<A>> ?= g(), A\nend.\n",
+	]) {
+		tree = parseClean(source, `maybe block: ${source}`);
+		assert.equal(count(tree, "MaybeExpression"), 1, `maybe block: ${source}`);
+	}
 
 	// Remote calls: only `atom:name(` is a ModuleName.
 	tree = parseClean(
@@ -563,6 +582,12 @@ function complete(doc, explicit = false) {
 	assert(!result.labels.includes("receive"), "only lists functions after `lists:`");
 
 	assert.equal(complete("f() -> not_a_module:fo|"), null);
+	assert.equal(complete("f() -> Alists:ma|"), null, "a variable module is unknown");
+
+	assert.equal(complete("f() -> Cou|"), null, "no completion inside Variables");
+	assert.equal(complete("f() -> _rou|"), null, "no completion inside Variables");
+	result = complete("f() -> x#rec{a = rou|");
+	assert.equal(result.from, "f() -> x#rec{a = ".length);
 
 	result = complete("f() -> ?MOD|");
 	assert.equal(result.from, "f() -> ?".length);

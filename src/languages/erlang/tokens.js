@@ -13,6 +13,8 @@ const percent = 37;
 const colon = 58;
 const dot = 46;
 const question = 63;
+const lessThan = 60;
+const equals = 61;
 const backslash = 92;
 const underscore = 95;
 const at = 64;
@@ -65,20 +67,60 @@ function scanIdentifier(input, offset) {
 	return offset;
 }
 
-function readWord(input, length) {
+function readWord(input, from, to) {
 	let word = "";
-	for (let i = 0; i < length; i++) word += String.fromCharCode(input.peek(i));
+	for (let i = from; i < to; i++) word += String.fromCharCode(input.peek(i));
 	return word;
 }
 
+/** Skips whitespace, line breaks and comments; returns the next offset. */
+function skipSpaceAndComments(input, offset) {
+	for (;;) {
+		const ch = input.peek(offset);
+		if (isBlank(ch) || ch === newline || ch === carriageReturn) {
+			offset++;
+		} else if (ch === percent) {
+			while (input.peek(offset) >= 0 && input.peek(offset) !== newline) offset++;
+		} else {
+			return offset;
+		}
+	}
+}
+
+// Reserved words that start an expression, unlike `of`, `when`, `andalso`...
+const expressionKeywords = new Set([
+	"begin",
+	"bnot",
+	"case",
+	"fun",
+	"if",
+	"not",
+	"receive",
+	"try",
+]);
+
+// Characters that start a term: `{`, `[`, `"`, `'`, `$c`, `~"sigil"`, `#{}`.
+const termStarts = new Set([123, 91, 34, quote, 36, 126, 35]);
+
 /**
- * Whether the rest of the line after `offset` is blank or only a comment.
- * Used to tell the `maybe` block keyword from a plain `maybe` atom.
+ * Whether the `maybe` that ends at `offset` opens a `maybe ... end` block
+ * rather than being a plain atom. The keyword is followed by the start of an
+ * expression, while the atom is followed by an operator, a separator or a
+ * closing bracket (`[maybe]`, `maybe ->`, `maybe/1`, `maybe.`).
  */
-function endsLine(input, offset) {
-	offset = skipBlanks(input, offset);
+function startsMaybeBlock(input, offset) {
+	offset = skipSpaceAndComments(input, offset);
 	const ch = input.peek(offset);
-	return ch < 0 || ch === newline || ch === carriageReturn || ch === percent;
+	const next = input.peek(offset + 1);
+	// End of input: most likely a block that is still being typed.
+	if (ch < 0) return true;
+	if (isLowerStart(ch)) {
+		const word = readWord(input, offset, scanIdentifier(input, offset));
+		return !reservedWords.has(word) || expressionKeywords.has(word);
+	}
+	if (ch === question) return next !== equals; // `?MACRO`, not `?=`
+	if (ch === lessThan) return next === lessThan; // `<<`, not `<` or `<-`
+	return isUpperStart(ch) || isDigit(ch) || termStarts.has(ch);
 }
 
 /**
@@ -124,9 +166,10 @@ function scanQuotedAtom(input) {
  * - `FieldDot`: the dot of a record field access such as `State#state.count`.
  *   A form-ending dot is followed by whitespace, so a dot that is directly
  *   followed by an atom after a record name is unambiguous.
- * - `Maybe`: the `maybe` keyword of a `maybe ... end` block. `maybe` is only
- *   reserved when the feature is enabled, so it is treated as a keyword only
- *   when it ends its line, which is how maybe blocks are written.
+ * - `Maybe`: the `maybe` keyword of a `maybe ... end` block. `maybe` is a
+ *   reserved word only since OTP 27 (or with the `maybe_expr` feature), so
+ *   older code may use it as an atom; it is a keyword only when an
+ *   expression follows it.
  */
 export const erlangTokens = new ExternalTokenizer((input, stack) => {
 	const first = input.next;
@@ -154,9 +197,9 @@ export const erlangTokens = new ExternalTokenizer((input, stack) => {
 	if (!isLowerStart(first)) return;
 
 	const length = scanIdentifier(input, 0);
-	const word = readWord(input, length);
+	const word = readWord(input, 0, length);
 
-	if (word === "maybe" && endsLine(input, length) && stack.canShift(Maybe)) {
+	if (word === "maybe" && startsMaybeBlock(input, length) && stack.canShift(Maybe)) {
 		input.acceptToken(Maybe, length);
 		return;
 	}

@@ -265,7 +265,10 @@ function inLiteral(state, pos) {
 export function erlangComplete(context) {
 	if (inLiteral(context.state, context.pos)) return null;
 
-	const remote = context.matchBefore(/[a-z][a-zA-Z0-9_@]*:\w*$/);
+	// The patterns match whole identifiers, Variables included, so that the
+	// lowercase tail of `Count` or of a variable module (`Mod:`) is never
+	// completed as if it were an atom.
+	const remote = context.matchBefore(/[a-zA-Z_][a-zA-Z0-9_@]*:\w*$/);
 	if (remote) {
 		const module = remote.text.slice(0, remote.text.indexOf(":"));
 		const options = moduleFunctionOptions[module];
@@ -291,7 +294,8 @@ export function erlangComplete(context) {
 		};
 	}
 
-	const word = context.matchBefore(/[a-z][a-zA-Z0-9_@]*$/);
+	const word = context.matchBefore(/[a-zA-Z_][a-zA-Z0-9_@]*$/);
+	if (word && !/^[a-z]/.test(word.text)) return null;
 	if (!word && !context.explicit) return null;
 	return {
 		from: word ? word.from : context.pos,
