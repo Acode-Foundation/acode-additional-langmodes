@@ -1,0 +1,57 @@
+name: Publish to Acode
+
+# Bump `version` in plugin.json (and package.json), add the release to changelog.md,
+# then publish a GitHub release tagged with that version (v1.2.2 or 1.2.2).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: acode-store
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check the release tag matches plugin.json
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(jq -r .version plugin.json)
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::error::Release tag $TAG does not match plugin.json version $version."
+            exit 1
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+      - run: bun run check # generates parsers, typechecks, tests and writes plugin.zip
+
+      - id: publish
+        uses: Acode-Foundation/publish-plugin@v1
+        with:
+          api-key: ${{ secrets.ACODE_API_KEY }}
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.publish.outputs.version }}
+          RESULT: ${{ steps.publish.outputs.result }}
+          MESSAGE: ${{ steps.publish.outputs.message }}
+        run: |
+          {
+            echo "### Additional Language Modes $VERSION: $RESULT"
+            echo
+            echo "$MESSAGE"
+          } >> "$GITHUB_STEP_SUMMARY"
